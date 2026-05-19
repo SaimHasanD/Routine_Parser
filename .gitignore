@@ -1,4 +1,4 @@
-﻿.venv/
+.venv/
 __pycache__/
 *.pyc
 frontend/node_modules/
@@ -7,5 +7,3 @@ dist/
 .vscode/
 .idea/
 *.log
-.DS_Store
-Thumbs.db
