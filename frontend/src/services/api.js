@@ -1,0 +1,32 @@
+// API service layer
+
+const BASE_URL = '/api/v1';
+
+export async function healthCheck() {
+  const res = await fetch(`${BASE_URL}/health`);
+  return res.json();
+}
+
+export async function fetchGroups() {
+  const res = await fetch(`${BASE_URL}/groups`);
+  if (!res.ok) throw new Error('Failed to fetch groups');
+  return res.json();
+}
+
+export async function fetchRoutine(groupId) {
+  const res = await fetch(`${BASE_URL}/routine/${groupId}`);
+  if (!res.ok) throw new Error(`Failed to fetch routine for ${groupId}`);
+  return res.json();
+}
+
+export async function uploadExcel(file, password) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('password', password || '');
+  const res = await fetch(`${BASE_URL}/upload`, { method: 'POST', body: formData });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail.detail || `Upload failed (${res.status})`);
+  }
+  return res.json();
+}
