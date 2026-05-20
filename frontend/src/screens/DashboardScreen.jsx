@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, Calendar, BookOpen } from 'lucide-react';
+import { Search, ChevronDown, Calendar, BookOpen, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import RoutineTable from '../components/RoutineTable.jsx';
+import RoutinePreviewModal from '../components/RoutinePreviewModal.jsx';
+import RoutineDownloadLayout from '../components/RoutineDownloadLayout.jsx';
 import { healthCheck, fetchGroups, fetchRoutine } from '../services/api.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 
@@ -15,7 +20,89 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(false);
   const [serverWaking, setServerWaking] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      
+      const titleElement = document.querySelector('#routine-print-sheet h2');
+      const titleText = titleElement ? titleElement.innerText : `Class Routine - Section ${selectedGroup}`;
+      
+      doc.setFontSize(14);
+      doc.text(titleText, 15, 15);
+      
+      autoTable(doc, { 
+        html: '#routine-main-table', 
+        startY: 20,
+        useCss: true,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 2 }
+      });
+      
+      let finalY = doc.lastAutoTable.finalY + 10;
+      
+      autoTable(doc, {
+        html: '#routine-odd-table',
+        startY: finalY,
+        margin: { left: 15, right: 230 },
+        useCss: true,
+        theme: 'grid',
+        styles: { fontSize: 9 }
+      });
+      
+      autoTable(doc, {
+        html: '#routine-inst-table',
+        startY: finalY,
+        margin: { left: 75, right: 75 },
+        useCss: true,
+        theme: 'grid',
+        styles: { fontSize: 9 }
+      });
+      
+      autoTable(doc, {
+        html: '#routine-even-table',
+        startY: finalY,
+        margin: { left: 230, right: 15 },
+        useCss: true,
+        theme: 'grid',
+        styles: { fontSize: 9 }
+      });
+      
+      doc.save(`NUB_ECSE_Routine_Section_${selectedGroup}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    const element = document.getElementById('routine-print-sheet');
+    if (!element) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 3, // Very high density rendering for clearer text visibility
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+      const link = document.createElement('a');
+      link.download = `NUB_ECSE_Routine_Section_${selectedGroup || 'Full'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Image generation failed:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Wake server + load groups on mount
   useEffect(() => {
@@ -164,7 +251,63 @@ export default function DashboardScreen() {
           </p>
         </div>
       ) : hasSearched && routine.length > 0 ? (
-        <RoutineTable routine={routine} selectedGroup={selectedGroup} />
+        <div className="space-y-6">
+          {/* Actions Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                Routine Loaded Successfully
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadPdf}
+                disabled={downloading}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+              >
+                <FileText className="w-4 h-4" />
+                {downloading ? "Compiling..." : "Download PDF"}
+              </button>
+              <button
+                onClick={handleDownloadImage}
+                disabled={downloading}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+              >
+                <Download className="w-4 h-4" />
+                {downloading ? "Compiling..." : "Download Image"}
+              </button>
+              
+              <div className="h-6 w-px bg-slate-200 mx-1" />
+              
+              <button
+                onClick={() => setPreviewOpen(true)}
+                title="Print Preview Layout"
+                className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl border border-slate-200/60 transition-all active:scale-95"
+              >
+                <ImageIcon className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          </div>
+
+          <RoutineTable routine={routine} selectedGroup={selectedGroup} />
+
+          {/* Hidden layout for direct DOM capturing */}
+          <div className="absolute top-0 pointer-events-none" style={{ left: '-10000px' }}>
+            <RoutineDownloadLayout routine={routine} selectedGroup={selectedGroup} />
+          </div>
+
+          {/* Sessional/Print Layout Preview Modal */}
+          <RoutinePreviewModal 
+            isOpen={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+            routine={routine}
+            selectedGroup={selectedGroup}
+            onDownloadPdf={handleDownloadPdf}
+            onDownloadImage={handleDownloadImage}
+          />
+        </div>
       ) : hasSearched ? (
         <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
           <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />

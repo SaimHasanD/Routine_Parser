@@ -37,8 +37,10 @@ This document is the **single source of truth** representing the current state o
 - [frontend/src/App.jsx](file:///e:/nub-routine-generator/frontend/src/App.jsx) — Primary navigation router driving the SPA views.
 - [frontend/src/index.css](file:///e:/nub-routine-generator/frontend/src/index.css) — Custom stylesheet importing typography variables.
 - [frontend/src/main.jsx](file:///e:/nub-routine-generator/frontend/src/main.jsx) — Vite react rendering entry.
+- [frontend/src/components/RoutineDownloadLayout.jsx](file:///e:/nub-routine-generator/frontend/src/components/RoutineDownloadLayout.jsx) — Official PDF replica print layout mapping all 59 NUB course codes, odd/even week calendars, and dynamic section-specific instructor list.
+- [frontend/src/components/RoutinePreviewModal.jsx](file:///e:/nub-routine-generator/frontend/src/components/RoutinePreviewModal.jsx) — Glassmorphic modal to preview the print layout before downloading.
 - [frontend/src/components/RoutineTable.jsx](file:///e:/nub-routine-generator/frontend/src/components/RoutineTable.jsx) — Displays premium schedule grid strips from Sunday to Saturday with hover timelines and info popups.
-- [frontend/src/screens/DashboardScreen.jsx](file:///e:/nub-routine-generator/frontend/src/screens/DashboardScreen.jsx) — Main dashboard viewport displaying section search and generated routines.
+- [frontend/src/screens/DashboardScreen.jsx](file:///e:/nub-routine-generator/frontend/src/screens/DashboardScreen.jsx) — Main dashboard viewport displaying section search and generated routines. Features PDF and Image download actions.
 - [frontend/src/screens/UploadScreen.jsx](file:///e:/nub-routine-generator/frontend/src/screens/UploadScreen.jsx) — Admin control panel showing login, file uploader, and visual alert alerts.
 - [frontend/src/services/api.js](file:///e:/nub-routine-generator/frontend/src/services/api.js) — Clean HTTP gateway querying backend REST APIs.
 
@@ -75,8 +77,15 @@ All active issues, architectural gaps, and parser bugs have been fully fixed, te
 | 8 | **Saturday Support** | Added `"Saturday"` strip rendering to the weekly table layout. | **Fixed** |
 | 9 | **Online Class Day Mismatch** | Developed dynamic online header scanning (`_detect_online_day`) mapping classes dynamically to **Wednesday** (not Friday). | **Fixed** |
 | 10| **Phantom tags on CSE 1258** | Force-stripped odd/even markers for `CSE 1258` at the parser source level. | **Fixed** |
+| 11| **Routine Download Feature** | Implemented client-side PDF/Image generation using `html2canvas` and `jspdf`. Created a full replication of the NUB official PDF routine with a 59-course static dictionary mapping, accurate sessional odd/even week calendars, and section-specific instructor lists. | **Fixed** |
 
 ---
+
+## 4. What Next to Do
+
+1. **Deploy to Production**: Deploy the frontend to Vercel/Netlify and the backend to a VPS or Railway/Render. Update the `api.js` base URL to point to the production backend.
+2. **Dynamic Calendar Dates**: Currently, the Odd/Even week calendar dates are hardcoded for Summer 2025. Consider adding an admin panel to update these sessional dates dynamically for future semesters.
+3. **Admin User Management**: Implement a full JWT-based authentication system for the admin dashboard rather than a single hardcoded password.
 
 ## 4. How to Run
 
