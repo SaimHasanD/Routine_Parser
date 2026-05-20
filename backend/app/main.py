@@ -224,10 +224,11 @@ async def get_routine(group_id: str):
     if entries is None:
         raise HTTPException(404, f"Group '{group_id}' not found.")
 
-    # Deduplicate merged-cell duplicates by (day, time_slot, course_code, section_type)
+    # Deduplicate merged-cell duplicates by (day, time_slot, course_code, section_type, teacher name)
     seen, unique = set(), []
     for e in entries:
-        key = (e.get("day"), e["time_slot"], e["course_code"], e["section_type"])
+        teacher_name = e["teacher"]["name"] if isinstance(e.get("teacher"), dict) else e.get("teacher")
+        key = (e.get("day"), e["time_slot"], e["course_code"], e["section_type"], teacher_name)
         if key not in seen:
             seen.add(key)
             unique.append(dict(e))
