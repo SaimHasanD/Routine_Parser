@@ -2,27 +2,25 @@ from openpyxl.worksheet.worksheet import Worksheet
 from .merge_resolver import get_cell_value
 from .cell_parser import parse_cell
 
-LAB_START_ROW = 43
-LAB_END_ROW   = 54
+
 ODD_MARKER    = "odd"
 EVEN_MARKER   = "even"
 
 
-def parse_lab_section(ws: Worksheet, time_slots: dict, merge_map: dict) -> list[dict]:
+def parse_lab_section(ws: Worksheet, time_slots: dict, merge_map: dict, start_row: int, end_row: int) -> list[dict]:
     """
     Lab rooms span 2 rows: odd week (row N) and even week (row N+1).
     Col A = room (merged across 2 rows), Col B = odd/even marker.
     """
     entries = []
 
-    row_idx = LAB_START_ROW
-    while row_idx <= LAB_END_ROW:
+    row_idx = start_row
+    while row_idx <= end_row:
         room_val = get_cell_value(ws, row_idx, 1, merge_map)
-        if not room_val or not isinstance(room_val, str):
-            row_idx += 1
-            continue
-
-        room = room_val.strip().replace("\n", " ")
+        if room_val and isinstance(room_val, str):
+            room = room_val.strip().replace("\n", " ")
+        else:
+            room = "TBA"
 
         for sub_row in [row_idx, row_idx + 1]:
             week_marker_val = get_cell_value(ws, sub_row, 2, merge_map) or ""

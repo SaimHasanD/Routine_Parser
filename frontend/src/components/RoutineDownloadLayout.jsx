@@ -65,15 +65,8 @@ const COURSE_NAMES = {
   "IPE 4101": "Industrial Management"
 };
 
-const ODD_WEEK_DATES = [
-  "10-Oct-25", "24-Oct-25", "07-Nov-25", "21-Nov-25",
-  "05-Dec-25", "19-Dec-25", "02-Jan-26", "16-Jan-26"
-];
-
-const EVEN_WEEK_DATES = [
-  "17-Oct-25", "31-Oct-25", "14-Nov-25", "28-Nov-25",
-  "12-Dec-25", "26-Dec-25", "09-Jan-26", "23-Jan-26"
-];
+const ODD_WEEK_DATES = Array(8).fill("");
+const EVEN_WEEK_DATES = Array(8).fill("");
 
 export function deduceBatch(group) {
   const match = group.match(/\d+/);
@@ -96,10 +89,10 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
       seenAcro.add(entry.teacher_acro);
       instructors.push({
         acronym: entry.teacher_acro,
-        name: teacher.name,
-        designation: teacher.designation || "Lecturer",
-        department: teacher.department || "CSE",
-        mobile: teacher.mobile || "N/A"
+        name: teacher.name === entry.teacher_acro ? "" : teacher.name,
+        designation: teacher.designation || "",
+        department: teacher.department || "",
+        mobile: teacher.mobile || ""
       });
     }
   });
@@ -108,11 +101,20 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
     instructors.push({
       acronym: "TBA",
       name: "To Be Announced",
-      designation: "Lecturer",
-      department: "CSE",
-      mobile: "N/A"
+      designation: "",
+      department: "",
+      mobile: ""
     });
   }
+
+  // Sort routine so Online classes appear at the end
+  const sortedRoutine = [...routine].sort((a, b) => {
+    const aIsOnline = a.room.toLowerCase() === 'online';
+    const bIsOnline = b.room.toLowerCase() === 'online';
+    if (aIsOnline && !bIsOnline) return 1;
+    if (!aIsOnline && bIsOnline) return -1;
+    return 0;
+  });
 
   const getDayNotes = (entry) => {
     if (entry.room.toLowerCase() === "online") return `${entry.day} (Online)`;
@@ -156,7 +158,7 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
           </tr>
         </thead>
         <tbody>
-          {routine.map((entry, index) => {
+          {sortedRoutine.map((entry, index) => {
             const subjectName = COURSE_NAMES[entry.course] || entry.course;
             return (
               <tr key={index} style={{ backgroundColor: getRowBgColor(entry) }}>

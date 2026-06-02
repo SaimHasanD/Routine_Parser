@@ -1,6 +1,8 @@
 import asyncio
 from openpyxl import load_workbook
 
+from openpyxl.worksheet.worksheet import Worksheet
+
 from .merge_resolver import build_merge_map
 from .header_parser import parse_time_headers
 from .faculty_mapper import build_faculty_map, resolve_teacher
@@ -9,6 +11,48 @@ from .section_lab import parse_lab_section
 from .section_online import parse_online_section
 
 
+
+
+def _detect_boundaries(ws: Worksheet):
+    """
+    Scans column 1 to find section boundaries.
+    Returns: (reg_start, reg_end, lab_start, lab_end,
+              online_label, online_header, online_start, online_end)
+    """
+    max_row = ws.max_row
+    reg_start = 5
+    lab_start = -1
+    online_label = -1
+    online_header = -1
+    online_start = -1
+
+    for r in range(1, max_row + 1):
+        val = ws.cell(r, 1).value
+        if isinstance(val, str):
+            val_upper = val.strip().upper()
+            if val_upper == "LAB":
+                lab_start = r
+            elif "ONLINE" in val_upper:
+                online_label = r
+                
+    reg_end = max_row
+    lab_end = max_row
+    online_end = max_row
+
+    if online_label > 0:
+        online_header = online_label + 2
+        online_start = online_label + 3
+        
+        if lab_start > 0:
+            lab_end = online_label - 1
+            reg_end = lab_start - 1
+        else:
+            reg_end = online_label - 1
+    elif lab_start > 0:
+        reg_end = lab_start - 1
+        
+    return (reg_start, reg_end, lab_start, lab_end,
+            online_label, online_header, online_start, online_end)
 
 
 def _parse_workbook(path: str) -> dict:
@@ -63,11 +107,17 @@ def _parse_workbook(path: str) -> dict:
         if has_ecse and not is_wednesday:
             day = "Friday"
             
-        day_entries = (
-            parse_regular_section(ws, time_slots, merge_map)
-            + parse_lab_section(ws, time_slots, merge_map)
-            + parse_online_section(ws, merge_map)
-        )
+        day_entries = []
+        bounds = _detect_boundaries(ws)
+        r_start, r_end, l_start, l_end, o_label, o_header, o_start, o_end = bounds
+        
+        if r_start <= r_end:
+            day_entries.extend(parse_regular_section(ws, time_slots, merge_map, r_start, r_end))
+        if l_start > 0 and l_start <= l_end:
+            day_entries.extend(parse_lab_section(ws, time_slots, merge_map, l_start, l_end))
+        if o_start > 0 and o_start <= o_end:
+            day_entries.extend(parse_online_section(ws, merge_map, o_label, o_header, o_start, o_end))
+            
         for e in day_entries:
             # Online entries may override the sheet day (e.g. Wednesday instead of Friday)
             if "_online_day" in e:

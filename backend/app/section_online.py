@@ -4,20 +4,18 @@ from .cell_parser import parse_cell
 from .header_parser import parse_online_time_headers
 import re
 
-ONLINE_LABEL_ROW   = 58
-ONLINE_HEADER_ROW  = 60
-ONLINE_START_ROW   = 61
-ONLINE_END_ROW     = 69
+
 ONLINE_ROOM        = "Online"
 ODD_MARKER         = "odd"
 EVEN_MARKER        = "even"
 
 
-def _detect_online_day(ws: Worksheet) -> str | None:
+def _detect_online_day(ws: Worksheet, label_row: int) -> str | None:
     """Parse the online section label row (e.g. 'Online Classes (Saturday/ Wednesday)')
     to determine what day online classes fall on."""
+    if label_row <= 0: return None
     for c in range(1, 15):
-        val = ws.cell(ONLINE_LABEL_ROW, c).value
+        val = ws.cell(label_row, c).value
         if val and isinstance(val, str) and "online" in val.lower():
             text = val.lower()
             # Look for day names in the label
@@ -39,24 +37,26 @@ def _detect_online_day(ws: Worksheet) -> str | None:
     return None
 
 
-def parse_online_section(ws: Worksheet, merge_map: dict) -> list[dict]:
+def parse_online_section(ws: Worksheet, merge_map: dict, label_row: int, header_row: int, start_row: int, end_row: int) -> list[dict]:
     """
-    Online classes: single time header row at 60, then odd/even sub-rows.
+    Online classes: single time header row, then odd/even sub-rows.
     No room column — room is always 'Online'.
     Day is detected from the label row (e.g. 'Online Classes (Saturday/ Wednesday)').
     """
     entries = []
-    time_slots = parse_online_time_headers(ws, ONLINE_HEADER_ROW)
-    online_day = _detect_online_day(ws)
+    if start_row <= 0 or end_row <= 0 or header_row <= 0: return []
+    
+    time_slots = parse_online_time_headers(ws, header_row)
+    online_day = _detect_online_day(ws, label_row)
 
-    for row_idx in range(ONLINE_START_ROW, ONLINE_END_ROW + 1):
+    for row_idx in range(start_row, end_row + 1):
         # Prevent leakage of merged cell markers from upper sections (e.g. lab section above row 61)
         week_marker_val = ws.cell(row_idx, 3).value
         if week_marker_val is None:
             # Check if it is merged within the online section boundaries
             for merge_range in ws.merged_cells.ranges:
                 if row_idx in range(merge_range.min_row, merge_range.max_row + 1) and 3 in range(merge_range.min_col, merge_range.max_col + 1):
-                    if merge_range.min_row >= ONLINE_START_ROW:
+                    if merge_range.min_row >= start_row:
                         week_marker_val = ws.cell(merge_range.min_row, merge_range.min_col).value
                     break
 

@@ -2,46 +2,36 @@
 
 ECSE class schedule viewer for Northern University Bangladesh.
 
-## Quick Start (Frontend Only)
+## What the project does
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+This project parses Excel-based class schedules and provides a web interface for students to view their routines. It extracts regular, lab, and online class data from uploaded spreadsheets. The application maps teacher acronyms to full names and handles specific schedule overrides automatically.
 
-Opens at http://localhost:5173
+## Key features
 
-- Public view: `/`
-- Admin upload: `/admin` (password: `admin123_nu`)
+- Parses Excel schedule files into structured data
+- Displays a weekly schedule grid for specific student groups
+- Generates downloadable PDF and image versions of the routine
+- Includes an administrative interface for uploading new schedule files
 
-## Stack
+## Tech stack
 
-- **Frontend**: React + Vite + Tailwind CSS
-- **Backend**: FastAPI + Python (coming next)
+- Frontend: React, Vite, Tailwind CSS
+- Backend: FastAPI, Python, openpyxl
 
-## Mock Mode
+## Getting started
 
-`src/services/api.js` has `USE_MOCK = true` — flip to `false` once backend is running.
+1. Clone the repository to your local machine.
+2. Navigate to the `backend` directory and install the Python dependencies using `pip install -r requirements.txt`.
+3. Start the backend server by running `python -m uvicorn app.main:app --reload --port 8000`.
+4. Open a new terminal, navigate to the `frontend` directory, and install the Node dependencies using `npm install`.
+5. Start the frontend development server by running `npm run dev`.
+6. Access the application at `http://localhost:5173`.
 
-## Folder Structure
+## Current state
 
-```
-nub-routine-generator/
-├── frontend/
-│   └── src/
-│       ├── App.jsx               ← router + nav
-│       ├── screens/
-│       │   ├── DashboardScreen.jsx   ← student view
-│       │   └── UploadScreen.jsx      ← admin upload
-│       ├── components/
-│       │   └── RoutineTable.jsx      ← schedule grid
-│       └── services/
-│           └── api.js                ← all API calls here
-└── backend/
-    └── app/
-        ├── main.py       ← FastAPI endpoints
-        ├── parser.py     ← Excel parser
-        ├── storage.py    ← cloud blob
-        └── state.py      ← RAM cache
-```
+The project is fully operational. For a detailed breakdown of the codebase, API endpoints, and resolved issues, see the [CURRENT_STATE.md](CURRENT_STATE.md) file.
+
+## Contributing
+
+Contributions are welcome. Please submit a pull request with your proposed changes or open an issue to discuss new features or bugs.
+

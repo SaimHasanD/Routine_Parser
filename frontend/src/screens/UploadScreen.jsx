@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { Upload, Lock, CheckCircle, AlertCircle } from 'lucide-react';
-import { uploadExcel } from '../services/api.js';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, Lock, CheckCircle, AlertCircle, FileSpreadsheet, RefreshCw, Calendar, Layers, Hash, Trash2 } from 'lucide-react';
+import { uploadExcel, fetchAdminStatus } from '../services/api.js';
 
 const ADMIN_PASSWORD = "admin123_nu";
 
@@ -9,12 +9,33 @@ export default function UploadScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  // Routine status
+  const [routineStatus, setRoutineStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+
+  // Upload
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
+
+  const loadStatus = async () => {
+    setStatusLoading(true);
+    try {
+      const data = await fetchAdminStatus();
+      setRoutineStatus(data);
+    } catch {
+      setRoutineStatus(null);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) loadStatus();
+  }, [isAuthenticated]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -46,16 +67,22 @@ export default function UploadScreen() {
     if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (isReplace = false) => {
     if (!file) return;
     setUploading(true);
     setUploadSuccess(null);
     setUploadError(null);
 
     try {
-      const data = await uploadExcel(file, password);
-      setUploadSuccess({ groupsCount: data.groups ? data.groups.length : 0 });
+      const data = await uploadExcel(file, password, isReplace);
+      setUploadSuccess({
+        message: data.message,
+        groupsCount: data.groups ? data.groups.length : 0,
+        totalEntries: data.total_entries || 0,
+      });
       setFile(null);
+      // Refresh status after successful upload
+      await loadStatus();
     } catch (error) {
       console.error("Upload failed", error);
       setUploadError(error.message || 'Upload failed.');
@@ -64,6 +91,16 @@ export default function UploadScreen() {
     }
   };
 
+  const formatDate = (isoString) => {
+    if (!isoString) return 'Unknown';
+    const d = new Date(isoString);
+    return d.toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  // ── Login Screen ────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -73,7 +110,7 @@ export default function UploadScreen() {
           </div>
           <h2 className="text-2xl font-bold text-center text-slate-900 mb-2">Admin Authentication</h2>
           <p className="text-slate-500 text-center text-sm mb-6">
-            Enter password to upload updated class schedules.
+            Enter password to manage class schedules.
           </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -109,14 +146,127 @@ export default function UploadScreen() {
     );
   }
 
+  // ── Determine routine state ─────────────────────────────────────
+  const hasRoutine = routineStatus && routineStatus.loaded;
+  const isReady = routineStatus !== null && !statusLoading;
+
+  // ── Admin Panel ─────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
+
+      {/* ── Current Routine Status Card ── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
+            Active Routine
+          </h2>
+          <button
+            onClick={loadStatus}
+            disabled={statusLoading}
+            className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-slate-50"
+            title="Refresh status"
+          >
+            <RefreshCw className={`w-4 h-4 ${statusLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {statusLoading && !routineStatus ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3" />
+              <p className="text-sm text-slate-500">Checking system status...</p>
+            </div>
+          ) : !routineStatus ? (
+            <div className="text-center py-6">
+              <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-4">
+                <AlertCircle className="w-7 h-7" />
+              </div>
+              <h3 className="text-slate-900 font-semibold mb-1">Failed to Load Status</h3>
+              <p className="text-slate-500 text-sm mb-4">Could not connect to the backend.</p>
+              <button onClick={loadStatus} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">
+                Retry Connection
+              </button>
+            </div>
+          ) : hasRoutine ? (
+            /* ── Routine IS loaded ── */
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    File Name
+                  </div>
+                  <p className="text-slate-900 font-semibold text-sm truncate" title={routineStatus.filename}>
+                    {routineStatus.filename || 'Unknown'}
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Loaded At
+                  </div>
+                  <p className="text-slate-900 font-semibold text-sm">
+                    {formatDate(routineStatus.uploaded_at)}
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
+                    <Layers className="w-3.5 h-3.5" />
+                    Sections
+                  </div>
+                  <p className="text-slate-900 font-semibold text-sm">
+                    {routineStatus.groups_count} groups
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">
+                    <Hash className="w-3.5 h-3.5" />
+                    Total Entries
+                  </div>
+                  <p className="text-slate-900 font-semibold text-sm">
+                    {routineStatus.total_entries} classes
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ── No routine loaded ── */
+            <div className="text-center py-6">
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-4">
+                <AlertCircle className="w-7 h-7" />
+              </div>
+              <h3 className="text-slate-900 font-semibold mb-1">No Routine Loaded</h3>
+              <p className="text-slate-500 text-sm">
+                Upload an Excel file below to get started.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Upload Card ── */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Upload Routine Spreadsheet</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">
+          {hasRoutine ? 'Replace Routine' : 'Upload Routine'}
+        </h2>
         <p className="text-slate-500 text-sm mb-6">
-          Drag and drop your NUB master schedule Excel file here.
+          {hasRoutine
+            ? 'Upload a new Excel file to replace the currently active routine.'
+            : 'Upload the NUB master schedule Excel file to activate the system.'}
         </p>
 
+        {/* Drag & Drop zone */}
         <div
           onDragEnter={handleDrag}
           onDragOver={handleDrag}
@@ -147,35 +297,57 @@ export default function UploadScreen() {
           )}
         </div>
 
+        {/* Upload / Replace button */}
         <button
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          className={`w-full mt-6 py-3 font-medium rounded-xl transition-all shadow-sm flex justify-center items-center ${
-            file && !uploading
-              ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          onClick={() => handleUpload(hasRoutine)}
+          disabled={!isReady || !file || uploading}
+          className={`w-full mt-6 py-3 font-medium rounded-xl transition-all shadow-sm flex justify-center items-center gap-2 ${
+            isReady && file && !uploading
+              ? hasRoutine
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               : 'bg-slate-100 text-slate-400 cursor-not-allowed'
           }`}
         >
           {uploading ? (
-            <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          ) : hasRoutine ? (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Replace Current Routine
+            </>
           ) : (
-            'Process & Upload Schedule'
+            <>
+              <Upload className="w-4 h-4" />
+              Upload &amp; Activate Routine
+            </>
           )}
         </button>
 
+        {/* Warning for replacement */}
+        {hasRoutine && file && (
+          <div className="mt-4 flex items-start gap-2 text-amber-700 text-xs bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>This will replace the current routine <strong>"{routineStatus?.filename}"</strong> with <strong>"{file.name}"</strong>. This action cannot be undone.</span>
+          </div>
+        )}
+
+        {/* Success */}
         {uploadSuccess && (
           <div className="mt-6 border border-emerald-200 bg-emerald-50 rounded-xl p-4 flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-emerald-900 text-sm">Upload Successful!</h4>
+              <h4 className="font-bold text-emerald-900 text-sm">
+                {hasRoutine ? 'Routine Replaced!' : 'Upload Successful!'}
+              </h4>
               <p className="text-emerald-700 text-xs mt-0.5">
-                Parsed correctly. Generated routines for{' '}
-                <strong>{uploadSuccess.groupsCount} sections</strong>.
+                {uploadSuccess.message}
               </p>
             </div>
           </div>
         )}
 
+        {/* Error */}
         {uploadError && (
           <div className="mt-6 border border-rose-200 bg-rose-50 rounded-xl p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
