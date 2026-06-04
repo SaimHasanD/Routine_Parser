@@ -7,6 +7,10 @@ export default function RoutinePreviewModal({
   onClose, 
   routine, 
   selectedGroup,
+  title,
+  season,
+  oddDates,
+  evenDates,
   onDownloadPdf,
   onDownloadImage 
 }) {
@@ -99,7 +103,14 @@ export default function RoutinePreviewModal({
               marginBottom: '2rem'
             }}
           >
-            <RoutineDownloadLayout routine={routine} selectedGroup={selectedGroup} />
+            <RoutineDownloadLayout 
+              routine={routine} 
+              selectedGroup={selectedGroup} 
+              title={title}
+              season={season}
+              oddDates={oddDates}
+              evenDates={evenDates}
+            />
           </div>
         </div>
 

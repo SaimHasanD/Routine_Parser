@@ -31,7 +31,7 @@ export default function App() {
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
             N
           </div>
-          <span className="font-bold text-slate-900 tracking-tight">NU Routine Hub</span>
+          <span className="font-bold text-slate-900 tracking-tight">NUB Routine Hub</span>
         </div>
         <button
           onClick={() => navigate(currentRoute === '/admin' ? '/' : '/admin')}

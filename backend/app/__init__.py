@@ -58,6 +58,55 @@ def _detect_boundaries(ws: Worksheet):
 def _parse_workbook(path: str) -> dict:
     wb = load_workbook(path, data_only=True)
     faculty_map = build_faculty_map(wb)
+    
+    title = None
+    season = None
+    odd_week_dates = []
+    even_week_dates = []
+
+    # Extract title and dates from the first non-faculty sheet
+    for sheet_name in wb.sheetnames:
+        if "faculty" in sheet_name.strip().lower():
+            continue
+        ws = wb[sheet_name]
+        
+        # 1. Title
+        val = ws.cell(1, 1).value
+        if val and isinstance(val, str):
+            title = val.strip().replace('\n', ' ')
+            import re
+            match = re.search(r'\b(summer|spring|fall|autumn|winter)\b\W*(\d{4})\b', title, re.IGNORECASE)
+            if match:
+                season = f"{match.group(1).capitalize()} - {match.group(2)}"
+            
+        # 2. Dates table
+        date_col = -1
+        date_start_row = -1
+        for r in range(1, ws.max_row + 1):
+            for c in range(1, 15):
+                cell_val = str(ws.cell(r, c).value or "").strip().lower()
+                if cell_val == "date":
+                    date_col = c
+                    date_start_row = r + 1
+                    break
+            if date_col != -1:
+                break
+                
+        if date_start_row != -1:
+            all_dates = []
+            for r in range(date_start_row, ws.max_row + 1):
+                d_val = ws.cell(r, date_col).value
+                if not d_val:
+                    break
+                all_dates.append(str(d_val).strip())
+                
+            for i, d in enumerate(all_dates):
+                if i % 2 == 0:
+                    odd_week_dates.append(d)
+                else:
+                    even_week_dates.append(d)
+                    
+        break  # Only extract metadata from the primary sheet
 
     raw_entries = []
     for sheet_name in wb.sheetnames:
@@ -176,6 +225,10 @@ def _parse_workbook(path: str) -> dict:
         "groups":  groups,
         "index":   index,
         "total":   len(entries),
+        "title":   title,
+        "season":  season,
+        "odd_week_dates": odd_week_dates,
+        "even_week_dates": even_week_dates,
     }
 
 

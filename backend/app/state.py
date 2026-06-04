@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 _lock = asyncio.Lock()
 
 _state: dict = {
+    "title": None,
+    "season": None,
+    "odd_week_dates": [],
+    "even_week_dates": [],
     "groups": [],
     "index": {},
     "total": 0,
@@ -20,6 +24,10 @@ _routine_meta: dict = {
 
 async def set_state(data: dict, filename: str = None):
     async with _lock:
+        _state["title"] = data.get("title")
+        _state["season"] = data.get("season")
+        _state["odd_week_dates"] = data.get("odd_week_dates", [])
+        _state["even_week_dates"] = data.get("even_week_dates", [])
         _state["groups"] = data["groups"]
         _state["index"]  = data["index"]
         _state["total"]  = data["total"]
@@ -41,6 +49,10 @@ async def get_routine_meta() -> dict:
 
 async def clear_state():
     async with _lock:
+        _state["title"] = None
+        _state["season"] = None
+        _state["odd_week_dates"] = []
+        _state["even_week_dates"] = []
         _state["groups"] = []
         _state["index"] = {}
         _state["total"] = 0

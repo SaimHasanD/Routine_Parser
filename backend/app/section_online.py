@@ -10,31 +10,31 @@ ODD_MARKER         = "odd"
 EVEN_MARKER        = "even"
 
 
-def _detect_online_day(ws: Worksheet, label_row: int) -> str | None:
+def _detect_online_days(ws: Worksheet, label_row: int) -> list[str]:
     """Parse the online section label row (e.g. 'Online Classes (Saturday/ Wednesday)')
-    to determine what day online classes fall on."""
-    if label_row <= 0: return None
+    to determine what days online classes fall on (in order of appearance)."""
+    if label_row <= 0: return []
     for c in range(1, 15):
         val = ws.cell(label_row, c).value
         if val and isinstance(val, str) and "online" in val.lower():
             text = val.lower()
-            # Look for day names in the label
             day_map = {
-                "wednesday": "Wednesday",
                 "saturday": "Saturday",
                 "sunday": "Sunday",
                 "monday": "Monday",
                 "tuesday": "Tuesday",
+                "wednesday": "Wednesday",
                 "thursday": "Thursday",
                 "friday": "Friday",
             }
-            # Prefer Wednesday if multiple days mentioned (university convention)
-            if "wednesday" in text:
-                return "Wednesday"
+            found = []
             for key, name in day_map.items():
-                if key in text:
-                    return name
-    return None
+                pos = text.find(key)
+                if pos != -1:
+                    found.append((pos, name))
+            found.sort(key=lambda x: x[0])
+            return [name for _, name in found]
+    return []
 
 
 def parse_online_section(ws: Worksheet, merge_map: dict, label_row: int, header_row: int, start_row: int, end_row: int) -> list[dict]:
@@ -47,7 +47,7 @@ def parse_online_section(ws: Worksheet, merge_map: dict, label_row: int, header_
     if start_row <= 0 or end_row <= 0 or header_row <= 0: return []
     
     time_slots = parse_online_time_headers(ws, header_row)
-    online_day = _detect_online_day(ws, label_row)
+    online_days = _detect_online_days(ws, label_row)
 
     for row_idx in range(start_row, end_row + 1):
         # Prevent leakage of merged cell markers from upper sections (e.g. lab section above row 61)
@@ -86,6 +86,23 @@ def parse_online_section(ws: Worksheet, merge_map: dict, label_row: int, header_
                     curr_sec_type = "online"
                     curr_week_note = ""
 
+                # Look for a specific day in adjacent columns for this class, searching upwards if cell is empty (implied merged visually)
+                specific_day = None
+                day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+                for offset in (1, 2, 3):
+                    adj_col = col_idx + offset
+                    # Look upwards from current row up to start_row
+                    for search_row in range(row_idx, start_row - 1, -1):
+                        adj_val = str(ws.cell(search_row, adj_col).value or "").strip()
+                        for d_name in day_names:
+                            if d_name.lower() == adj_val.lower():
+                                specific_day = d_name
+                                break
+                        if specific_day:
+                            break
+                    if specific_day:
+                        break
+
                 entry = {
                     **p,
                     "room":         ONLINE_ROOM,
@@ -93,9 +110,20 @@ def parse_online_section(ws: Worksheet, merge_map: dict, label_row: int, header_
                     "section_type": curr_sec_type,
                     "week_note":    curr_week_note,
                 }
-                # Tag with detected online day so __init__.py can override the sheet day
-                if online_day:
-                    entry["_online_day"] = online_day
+                
+                # Determine online day for this column based on position
+                col_online_day = None
+                if len(online_days) >= 2:
+                    col_online_day = online_days[0] if col_idx < 11 else online_days[1]
+                elif len(online_days) == 1:
+                    col_online_day = online_days[0]
+
+                # Assign day: Specific row day > Header day
+                if specific_day:
+                    entry["_online_day"] = specific_day
+                elif col_online_day:
+                    entry["_online_day"] = col_online_day
+                    
                 entries.append(entry)
 
     return entries

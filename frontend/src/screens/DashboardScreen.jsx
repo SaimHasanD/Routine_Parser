@@ -17,6 +17,10 @@ export default function DashboardScreen() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [routine, setRoutine] = useState([]);
+  const [title, setTitle] = useState('');
+  const [season, setSeason] = useState('');
+  const [oddDates, setOddDates] = useState([]);
+  const [evenDates, setEvenDates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [serverWaking, setServerWaking] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -112,6 +116,8 @@ export default function DashboardScreen() {
         await healthCheck();
         const data = await fetchGroups();
         setGroups(data.groups || []);
+        if (data.title) setTitle(data.title);
+        if (data.season) setSeason(data.season);
       } catch (err) {
         console.error("Init error", err);
         setGroups([]);
@@ -144,6 +150,9 @@ export default function DashboardScreen() {
     try {
       const data = await fetchRoutine(selectedGroup);
       setRoutine(data.entries || []);
+      if (data.odd_week_dates) setOddDates(data.odd_week_dates);
+      if (data.even_week_dates) setEvenDates(data.even_week_dates);
+      if (data.season) setSeason(data.season);
     } catch (err) {
       console.error("Fetch routine error", err);
       setRoutine([]);
@@ -160,13 +169,13 @@ export default function DashboardScreen() {
           <Calendar className="w-64 h-64" />
         </div>
         <span className="text-xs bg-indigo-500/30 text-indigo-300 border border-indigo-500/20 px-3 py-1 rounded-full font-semibold tracking-wider uppercase">
-          Department of CSE
+          Department of ECSE
         </span>
         <h1 className="text-3xl font-extrabold tracking-tight mt-3 text-slate-50">
           Northern University Bangladesh
         </h1>
         <p className="text-slate-300 text-sm mt-1 font-medium">
-          ECSE Class Routine — Summer 2025
+          {title || "Class Routine"}
         </p>
 
         {serverWaking && (
@@ -295,7 +304,14 @@ export default function DashboardScreen() {
 
           {/* Hidden layout for direct DOM capturing */}
           <div className="absolute top-0 pointer-events-none" style={{ left: '-10000px' }}>
-            <RoutineDownloadLayout routine={routine} selectedGroup={selectedGroup} />
+            <RoutineDownloadLayout 
+              routine={routine} 
+              selectedGroup={selectedGroup}
+              title={title}
+              season={season}
+              oddDates={oddDates}
+              evenDates={evenDates}
+            />
           </div>
 
           {/* Sessional/Print Layout Preview Modal */}
@@ -304,6 +320,10 @@ export default function DashboardScreen() {
             onClose={() => setPreviewOpen(false)}
             routine={routine}
             selectedGroup={selectedGroup}
+            title={title}
+            season={season}
+            oddDates={oddDates}
+            evenDates={evenDates}
             onDownloadPdf={handleDownloadPdf}
             onDownloadImage={handleDownloadImage}
           />

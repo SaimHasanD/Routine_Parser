@@ -65,20 +65,8 @@ const COURSE_NAMES = {
   "IPE 4101": "Industrial Management"
 };
 
-const ODD_WEEK_DATES = Array(8).fill("");
-const EVEN_WEEK_DATES = Array(8).fill("");
-
-export function deduceBatch(group) {
-  const match = group.match(/\d+/);
-  if (match) {
-    const num = parseInt(match[0]);
-    return 58 - num;
-  }
-  return 56;
-}
-
-export default function RoutineDownloadLayout({ routine, selectedGroup }) {
-  const batch = deduceBatch(selectedGroup);
+export default function RoutineDownloadLayout({ routine, selectedGroup, title, season, oddDates, evenDates }) {
+  if (!routine || routine.length === 0) return null;
 
   const instructors = [];
   const seenAcro = new Set();
@@ -139,10 +127,8 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
         padding: '15mm' 
       }}
     >
-      <div className="bg-[#9cc2e5] border-2 border-slate-600 p-2 text-center mb-4">
-        <h2 className="text-[16px] font-bold uppercase tracking-wide text-black m-0">
-          NUB - ECSE Batch {batch} - Section {selectedGroup} Class Routine
-        </h2>
+      <div className="bg-sky-200 border-2 border-slate-400 py-2 mb-4 text-center font-bold text-lg text-slate-800 tracking-wide mt-4">
+        NUB - ECSE - SECTION {selectedGroup.toUpperCase()} {season ? `(${season}) ` : ''}CLASS ROUTINE
       </div>
 
       <table id="routine-main-table" className="w-full border-collapse border-2 border-slate-600 mb-6 table-fixed">
@@ -177,18 +163,22 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
 
       <div className="grid grid-cols-10 gap-4 items-start">
         <div className="col-span-2">
-          <table id="routine-odd-table" className="w-full border-collapse border-2 border-slate-600">
+          <table id="routine-odd-table" className="w-full border-collapse border border-slate-400 text-center">
             <thead>
-              <tr className="border-b border-slate-600" style={{ backgroundColor: '#FFF8DC' }}>
-                <th className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '15%' }}>S.L</th>
-                <th className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '85%' }}>Odd Week</th>
+              <tr className="bg-slate-200 text-slate-800">
+                <th className="border border-slate-400 p-1 text-sm w-12">S.L</th>
+                <th className="border border-slate-400 p-1 text-sm font-bold">Odd Week</th>
               </tr>
             </thead>
             <tbody>
-              {ODD_WEEK_DATES.map((date, idx) => (
-                <tr key={idx} className="bg-white">
-                  <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{idx * 2 + 1}</td>
-                  <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{date}</td>
+              {Array(8).fill(null).map((_, i) => (
+                <tr key={i} className="bg-white">
+                  <td className="border border-slate-400 p-1.5 text-xs text-slate-600 font-medium">
+                    {i * 2 + 1}
+                  </td>
+                  <td className="border border-slate-400 p-1.5 text-xs text-slate-700 font-medium">
+                    {(oddDates && oddDates[i]) || ""}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -197,10 +187,8 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
 
         <div className="col-span-6">
           <div className="border-2 border-slate-600">
-            <div className="bg-[#9cc2e5] border-b border-slate-600 p-2 text-center">
-              <h3 className="uppercase m-0 text-black" style={{ fontSize: '13px', fontWeight: 'bold' }}>
-                NUB - ECSE Batch {batch} - Section {selectedGroup} Instructor List
-              </h3>
+            <div className="bg-sky-200 border-x-2 border-t-2 border-slate-400 py-1.5 text-center font-bold text-sm text-slate-800">
+              NUB - ECSE - SECTION {selectedGroup.toUpperCase()} INSTRUCTOR LIST
             </div>
             <table id="routine-inst-table" className="w-full border-collapse">
               <thead>
@@ -230,18 +218,22 @@ export default function RoutineDownloadLayout({ routine, selectedGroup }) {
         </div>
 
         <div className="col-span-2">
-          <table id="routine-even-table" className="w-full border-collapse border-2 border-slate-600">
+          <table id="routine-even-table" className="w-full border-collapse border border-slate-400 text-center h-full">
             <thead>
-              <tr className="border-b border-slate-600" style={{ backgroundColor: '#E8F4FD' }}>
-                <th className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '15%' }}>S.L</th>
-                <th className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '85%' }}>Even Week</th>
+              <tr className="bg-slate-200 text-slate-800">
+                <th className="border border-slate-400 p-1 text-sm w-12">S.L</th>
+                <th className="border border-slate-400 p-1 text-sm font-bold">Even Week</th>
               </tr>
             </thead>
             <tbody>
-              {EVEN_WEEK_DATES.map((date, idx) => (
-                <tr key={idx} className="bg-white">
-                  <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{(idx + 1) * 2}</td>
-                  <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{date}</td>
+              {Array(8).fill(null).map((_, i) => (
+                <tr key={i} className="bg-white">
+                  <td className="border border-slate-400 p-1.5 text-xs text-slate-600 font-medium">
+                    {(i + 1) * 2}
+                  </td>
+                  <td className="border border-slate-400 p-1.5 text-xs text-slate-700 font-medium">
+                    {(evenDates && evenDates[i]) || ""}
+                  </td>
                 </tr>
               ))}
             </tbody>

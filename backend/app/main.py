@@ -175,7 +175,11 @@ async def upload(file: UploadFile = File(...), password: str = Form(""), replace
     return UploadResponse(
         groups=data["groups"],
         total_entries=data["total"],
-        message=f"{action} successfully. {data['total']} entries across {len(data['groups'])} groups.",
+        title=data.get("title"),
+        season=data.get("season"),
+        odd_week_dates=data.get("odd_week_dates", []),
+        even_week_dates=data.get("even_week_dates", []),
+        message=f"{action} successfully. {data['total']} entries across {len(data['groups'])} groups."
     )
 
 
@@ -184,7 +188,11 @@ async def upload(file: UploadFile = File(...), password: str = Form(""), replace
 @app.get("/api/v1/groups")
 async def list_groups():
     state = await get_state()
-    return {"groups": state["groups"]}
+    return {
+        "groups": state["groups"],
+        "title": state.get("title"),
+        "season": state.get("season")
+    }
 
 
 # ── Routine by group ──────────────────────────────────────────────────────────
@@ -337,4 +345,11 @@ async def get_routine(group_id: str):
 
     merged.sort(key=sort_key)
 
-    return GroupRoutineResponse(group=group_id, entries=[ScheduleEntry(**e) for e in merged])
+    return GroupRoutineResponse(
+        group=group_id,
+        title=state.get("title"),
+        season=state.get("season"),
+        odd_week_dates=state.get("odd_week_dates", []),
+        even_week_dates=state.get("even_week_dates", []),
+        entries=[ScheduleEntry(**e) for e in merged]
+    )

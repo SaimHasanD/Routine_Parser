@@ -1,6 +1,6 @@
 // API service layer
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://routine-parser-api.onrender.com/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export async function healthCheck() {
   const res = await fetch(`${BASE_URL}/health`);

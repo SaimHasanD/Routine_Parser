@@ -29,9 +29,17 @@ class ScheduleEntry(BaseModel):
 class UploadResponse(BaseModel):
     groups: list[str]
     total_entries: int
+    title: str | None = None
+    season: str | None = None
+    odd_week_dates: list[str] = []
+    even_week_dates: list[str] = []
     message: str
 
 
 class GroupRoutineResponse(BaseModel):
     group: str
+    title: str | None = None
+    season: str | None = None
+    odd_week_dates: list[str] = []
+    even_week_dates: list[str] = []
     entries: list[ScheduleEntry]
