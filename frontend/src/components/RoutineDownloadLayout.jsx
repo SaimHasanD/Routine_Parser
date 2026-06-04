@@ -1,4 +1,5 @@
 import React from 'react';
+import { A4_LANDSCAPE_WIDTH_PX, EXPORT_SHEET_PADDING } from '../utils/exportSheet.js';
 
 const COURSE_NAMES = {
   "CSE 1102": "Structured Programming Language",
@@ -65,8 +66,81 @@ const COURSE_NAMES = {
   "IPE 4101": "Industrial Management"
 };
 
-export default function RoutineDownloadLayout({ routine, selectedGroup, title, season, oddDates, evenDates }) {
+const BORDER = '1px solid #475569';
+const HEADER_BG = '#bae6fd';
+const TABLE_HEAD_BG = '#e2e8f0';
+
+const thShell = (extra = {}) => ({
+  border: BORDER,
+  backgroundColor: TABLE_HEAD_BG,
+  verticalAlign: 'middle',
+  textAlign: 'center',
+  padding: 0,
+  height: '1px',
+  ...extra,
+});
+
+const tdShell = (extra = {}) => ({
+  border: BORDER,
+  verticalAlign: 'middle',
+  textAlign: 'center',
+  padding: 0,
+  height: '1px',
+  ...extra,
+});
+
+/** html2canvas ignores flex alignItems; use table-cell vertical-align instead. */
+const cellInnerWrap = (extra = {}) => ({
+  display: 'table',
+  width: '100%',
+  minHeight: extra.minHeight || '36px',
+  height: '100%',
+});
+
+const cellInnerContent = (align = 'center', extra = {}) => ({
+  display: 'table-cell',
+  verticalAlign: 'middle',
+  textAlign: align,
+  paddingTop: '10px',
+  paddingBottom: '10px',
+  paddingLeft: extra.paddingLeft || '5px',
+  paddingRight: extra.paddingRight || '5px',
+  boxSizing: 'border-box',
+  lineHeight: '1.35',
+  wordBreak: 'break-word',
+  fontSize: extra.fontSize,
+  fontWeight: extra.fontWeight,
+  color: extra.color,
+});
+
+function CenterCell({ as = 'td', align = 'center', shellExtra = {}, innerExtra = {}, children }) {
+  const Tag = as;
+  const shell = as === 'th' ? thShell(shellExtra) : tdShell(shellExtra);
+  return (
+    <Tag style={shell}>
+      <div style={cellInnerWrap(innerExtra)}>
+        <div className="routine-cell-inner" style={cellInnerContent(align, innerExtra)}>{children}</div>
+      </div>
+    </Tag>
+  );
+}
+
+export default function RoutineDownloadLayout({
+  routine,
+  selectedGroup,
+  title,
+  season,
+  oddDates,
+  evenDates,
+  forExport = false,
+}) {
   if (!routine || routine.length === 0) return null;
+
+  const rootId = forExport ? 'routine-print-sheet' : undefined;
+  const mainTableId = forExport ? 'routine-main-table' : undefined;
+  const oddTableId = forExport ? 'routine-odd-table' : undefined;
+  const instTableId = forExport ? 'routine-inst-table' : undefined;
+  const evenTableId = forExport ? 'routine-even-table' : undefined;
 
   const instructors = [];
   const seenAcro = new Set();
@@ -111,6 +185,12 @@ export default function RoutineDownloadLayout({ routine, selectedGroup, title, s
     return entry.week_note || "";
   };
 
+  const formatMobile = (mobile) => {
+    if (mobile == null || mobile === '') return '';
+    const text = String(mobile).trim();
+    return text.endsWith('.0') ? text.slice(0, -2) : text;
+  };
+
   const getRowBgColor = (entry) => {
     if (entry.room.toLowerCase() === "online") return "#F3E8FF";
     if (entry.odd_even === "odd") return "#FFF8DC";
@@ -119,28 +199,49 @@ export default function RoutineDownloadLayout({ routine, selectedGroup, title, s
   };
 
   return (
-    <div 
-      id="routine-print-sheet" 
-      className="bg-white text-black font-sans mx-auto box-border"
-      style={{ 
-        width: '1122px',
-        padding: '15mm' 
+    <div
+      id={rootId}
+      data-routine-sheet="true"
+      style={{
+        width: `${A4_LANDSCAPE_WIDTH_PX}px`,
+        padding: EXPORT_SHEET_PADDING,
+        backgroundColor: '#ffffff',
+        color: '#000000',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        lineHeight: 'normal',
+        boxSizing: 'border-box',
       }}
     >
-      <div className="bg-sky-200 border-2 border-slate-400 py-2 mb-4 text-center font-bold text-lg text-slate-800 tracking-wide mt-4">
-        NUB - ECSE - SECTION {selectedGroup.toUpperCase()} {season ? `(${season}) ` : ''}CLASS ROUTINE
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', marginTop: '16px' }}>
+        <tbody>
+          <tr>
+            <CenterCell
+              shellExtra={{
+                backgroundColor: HEADER_BG,
+                border: '2px solid #64748b',
+                fontWeight: 'bold',
+              }}
+              innerExtra={{ minHeight: '44px', fontSize: '18px', fontWeight: 'bold', color: '#1e293b' }}
+            >
+              NUB - ECSE - SECTION {selectedGroup.toUpperCase()} {season ? `(${season}) ` : ''}CLASS ROUTINE
+            </CenterCell>
+          </tr>
+        </tbody>
+      </table>
 
-      <table id="routine-main-table" className="w-full border-collapse border-2 border-slate-600 mb-6 table-fixed">
+      <table
+        id={mainTableId}
+        style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #475569', marginBottom: '24px', tableLayout: 'fixed' }}
+      >
         <thead>
-          <tr className="bg-slate-200 text-black border-b border-slate-600">
-            <th className="border border-slate-600 px-[5px] py-[10px] text-center" style={{ width: '5%', fontSize: '13px', fontWeight: 'bold' }}>S.L</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-center" style={{ width: '18%', fontSize: '13px', fontWeight: 'bold' }}>Time</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-center" style={{ width: '8%', fontSize: '12px', fontWeight: 'bold' }}>Room</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-center" style={{ width: '10%', fontSize: '12px', fontWeight: 'bold' }}>Instructor</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-center" style={{ width: '10%', fontSize: '13px', fontWeight: 'bold' }}>Course</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-left" style={{ width: '35%', fontSize: '13px', fontWeight: 'bold' }}>Subject Name</th>
-            <th className="border border-slate-600 px-[5px] py-[10px] text-left" style={{ width: '14%', fontSize: '12px', fontWeight: 'bold' }}>Day Notes</th>
+          <tr>
+            <CenterCell as="th" shellExtra={{ width: '5%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>S.L</CenterCell>
+            <CenterCell as="th" shellExtra={{ width: '18%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Time</CenterCell>
+            <CenterCell as="th" shellExtra={{ width: '8%' }} innerExtra={{ fontSize: '12px', fontWeight: 'bold' }}>Room</CenterCell>
+            <CenterCell as="th" shellExtra={{ width: '10%' }} innerExtra={{ fontSize: '12px', fontWeight: 'bold' }}>Instructor</CenterCell>
+            <CenterCell as="th" shellExtra={{ width: '10%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Course</CenterCell>
+            <CenterCell as="th" align="left" shellExtra={{ width: '35%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold', paddingLeft: '10px' }}>Subject Name</CenterCell>
+            <CenterCell as="th" align="left" shellExtra={{ width: '14%' }} innerExtra={{ fontSize: '12px', fontWeight: 'bold', paddingLeft: '8px' }}>Day Notes</CenterCell>
           </tr>
         </thead>
         <tbody>
@@ -148,98 +249,105 @@ export default function RoutineDownloadLayout({ routine, selectedGroup, title, s
             const subjectName = COURSE_NAMES[entry.course] || entry.course;
             return (
               <tr key={index} style={{ backgroundColor: getRowBgColor(entry) }}>
-                <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{index + 1}</td>
-                <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px' }}>{entry.start_time} – {entry.end_time}</td>
-                <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{entry.room}</td>
-                <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{entry.teacher_acro || "TBA"}</td>
-                <td className="border border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '13px', fontWeight: 'bold' }}>{entry.course}</td>
-                <td className="border border-slate-600 py-[5px] px-3 text-left" style={{ fontSize: '13px' }}>{subjectName}</td>
-                <td className="border border-slate-600 py-[5px] px-2 text-left" style={{ fontSize: '12px' }}>{getDayNotes(entry)}</td>
+                <CenterCell shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '12px' }}>{index + 1}</CenterCell>
+                <CenterCell shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '13px' }}>{entry.start_time} – {entry.end_time}</CenterCell>
+                <CenterCell shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '12px' }}>{entry.room}</CenterCell>
+                <CenterCell shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '12px' }}>{entry.teacher_acro || 'TBA'}</CenterCell>
+                <CenterCell shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>{entry.course}</CenterCell>
+                <CenterCell align="left" shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '13px', paddingLeft: '10px' }}>{subjectName}</CenterCell>
+                <CenterCell align="left" shellExtra={{ backgroundColor: getRowBgColor(entry) }} innerExtra={{ fontSize: '12px', paddingLeft: '8px' }}>{getDayNotes(entry)}</CenterCell>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      <div className="grid grid-cols-10 gap-4 items-start">
-        <div className="col-span-2">
-          <table id="routine-odd-table" className="w-full border-collapse border border-slate-400 text-center">
-            <thead>
-              <tr className="bg-slate-200 text-slate-800">
-                <th className="border border-slate-400 p-1 text-sm w-12">S.L</th>
-                <th className="border border-slate-400 p-1 text-sm font-bold">Odd Week</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array(8).fill(null).map((_, i) => (
-                <tr key={i} className="bg-white">
-                  <td className="border border-slate-400 p-1.5 text-xs text-slate-600 font-medium">
-                    {i * 2 + 1}
-                  </td>
-                  <td className="border border-slate-400 p-1.5 text-xs text-slate-700 font-medium">
-                    {(oddDates && oddDates[i]) || ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="col-span-6">
-          <div className="border-2 border-slate-600">
-            <div className="bg-sky-200 border-x-2 border-t-2 border-slate-400 py-1.5 text-center font-bold text-sm text-slate-800">
-              NUB - ECSE - SECTION {selectedGroup.toUpperCase()} INSTRUCTOR LIST
-            </div>
-            <table id="routine-inst-table" className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-200 border-b border-slate-600">
-                  <th className="border-r border-b border-slate-600 py-[5px] text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '6%' }}>S.L</th>
-                  <th className="border-r border-b border-slate-600 py-[5px] text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '12%' }}>Acro.</th>
-                  <th className="border-r border-b border-slate-600 py-[5px] text-left px-2" style={{ fontSize: '13px', fontWeight: 'bold', width: '30%' }}>Name</th>
-                  <th className="border-r border-b border-slate-600 py-[5px] text-left px-2" style={{ fontSize: '13px', fontWeight: 'bold', width: '22%' }}>Designation</th>
-                  <th className="border-r border-b border-slate-600 py-[5px] text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '10%' }}>Dept.</th>
-                  <th className="border-b border-slate-600 py-[5px] text-center" style={{ fontSize: '13px', fontWeight: 'bold', width: '20%' }}>Mobile Number</th>
-                </tr>
-              </thead>
-              <tbody>
-                {instructors.map((inst, idx) => (
-                  <tr key={idx} className="bg-white">
-                    <td className="border-r border-b border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{idx + 1}</td>
-                    <td className="border-r border-b border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{inst.acronym}</td>
-                    <td className="border-r border-b border-slate-600 py-[5px] px-2 text-left" style={{ fontSize: '12px' }}>{inst.name}</td>
-                    <td className="border-r border-b border-slate-600 py-[5px] px-2 text-left" style={{ fontSize: '12px' }}>{inst.designation}</td>
-                    <td className="border-r border-b border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{inst.department}</td>
-                    <td className="border-b border-slate-600 py-[5px] px-1 text-center" style={{ fontSize: '12px' }}>{inst.mobile}</td>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <tbody>
+          <tr style={{ verticalAlign: 'top' }}>
+            <td style={{ width: '20%', verticalAlign: 'top', paddingRight: '8px' }}>
+              <table id={oddTableId} style={{ width: '100%', borderCollapse: 'collapse', border: BORDER }}>
+                <thead>
+                  <tr>
+                    <CenterCell as="th" shellExtra={{ width: '40px' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>S.L</CenterCell>
+                    <CenterCell as="th" innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Odd Week</CenterCell>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </thead>
+                <tbody>
+                  {Array(8).fill(null).map((_, i) => (
+                    <tr key={i} style={{ backgroundColor: '#ffffff' }}>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{i * 2 + 1}</CenterCell>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{(oddDates && oddDates[i]) || ''}</CenterCell>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </td>
 
-        <div className="col-span-2">
-          <table id="routine-even-table" className="w-full border-collapse border border-slate-400 text-center h-full">
-            <thead>
-              <tr className="bg-slate-200 text-slate-800">
-                <th className="border border-slate-400 p-1 text-sm w-12">S.L</th>
-                <th className="border border-slate-400 p-1 text-sm font-bold">Even Week</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array(8).fill(null).map((_, i) => (
-                <tr key={i} className="bg-white">
-                  <td className="border border-slate-400 p-1.5 text-xs text-slate-600 font-medium">
-                    {(i + 1) * 2}
-                  </td>
-                  <td className="border border-slate-400 p-1.5 text-xs text-slate-700 font-medium">
-                    {(evenDates && evenDates[i]) || ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <td style={{ width: '60%', verticalAlign: 'top', padding: '0 8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #475569' }}>
+                <tbody>
+                  <tr>
+                    <CenterCell
+                      shellExtra={{
+                        backgroundColor: HEADER_BG,
+                        border: 'none',
+                        borderBottom: BORDER,
+                      }}
+                      innerExtra={{ minHeight: '40px', fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}
+                    >
+                      NUB - ECSE - SECTION {selectedGroup.toUpperCase()} INSTRUCTOR LIST
+                    </CenterCell>
+                  </tr>
+                </tbody>
+              </table>
+              <table id={instTableId} style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <CenterCell as="th" shellExtra={{ width: '6%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>S.L</CenterCell>
+                    <CenterCell as="th" shellExtra={{ width: '12%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Acro.</CenterCell>
+                    <CenterCell as="th" align="left" shellExtra={{ width: '30%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold', paddingLeft: '8px' }}>Name</CenterCell>
+                    <CenterCell as="th" align="left" shellExtra={{ width: '22%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold', paddingLeft: '8px' }}>Designation</CenterCell>
+                    <CenterCell as="th" shellExtra={{ width: '10%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Dept.</CenterCell>
+                    <CenterCell as="th" shellExtra={{ width: '20%' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Mobile Number</CenterCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instructors.map((inst, idx) => (
+                    <tr key={idx} style={{ backgroundColor: '#ffffff' }}>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{idx + 1}</CenterCell>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{inst.acronym}</CenterCell>
+                      <CenterCell align="left" shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px', paddingLeft: '8px' }}>{inst.name}</CenterCell>
+                      <CenterCell align="left" shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px', paddingLeft: '8px' }}>{inst.designation}</CenterCell>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{inst.department}</CenterCell>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{formatMobile(inst.mobile)}</CenterCell>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </td>
+
+            <td style={{ width: '20%', verticalAlign: 'top', paddingLeft: '8px' }}>
+              <table id={evenTableId} style={{ width: '100%', borderCollapse: 'collapse', border: BORDER }}>
+                <thead>
+                  <tr>
+                    <CenterCell as="th" shellExtra={{ width: '40px' }} innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>S.L</CenterCell>
+                    <CenterCell as="th" innerExtra={{ fontSize: '13px', fontWeight: 'bold' }}>Even Week</CenterCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array(8).fill(null).map((_, i) => (
+                    <tr key={i} style={{ backgroundColor: '#ffffff' }}>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{(i + 1) * 2}</CenterCell>
+                      <CenterCell shellExtra={{ backgroundColor: '#ffffff' }} innerExtra={{ fontSize: '12px' }}>{(evenDates && evenDates[i]) || ''}</CenterCell>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

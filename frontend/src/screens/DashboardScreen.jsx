@@ -6,7 +6,7 @@ import RoutineDownloadLayout from '../components/RoutineDownloadLayout.jsx';
 import { healthCheck, fetchGroups, fetchRoutine } from '../services/api.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { getCaptureScale, getPdfImageDimensions } from '../utils/exportSheet.js';
 
 
 
@@ -27,55 +27,75 @@ export default function DashboardScreen() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const dropdownRef = useRef(null);
+  const printSheetRef = useRef(null);
+
+  const getExportRoot = () =>
+    printSheetRef.current?.querySelector('#routine-print-sheet') ?? null;
+
+  const withExportCapture = async (captureFn) => {
+    const host = printSheetRef.current;
+    const element = getExportRoot();
+    if (!host || !element) return null;
+
+    const saved = {
+      position: host.style.position,
+      left: host.style.left,
+      top: host.style.top,
+      zIndex: host.style.zIndex,
+      opacity: host.style.opacity,
+      visibility: host.style.visibility,
+    };
+
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = '0';
+    host.style.zIndex = '99999';
+    host.style.opacity = '1';
+    host.style.visibility = 'visible';
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    try {
+      await document.fonts.ready;
+      return await captureFn(element);
+    } finally {
+      host.style.position = saved.position;
+      host.style.left = saved.left;
+      host.style.top = saved.top;
+      host.style.zIndex = saved.zIndex;
+      host.style.opacity = saved.opacity;
+      host.style.visibility = saved.visibility;
+    }
+  };
+
+  const captureExportCanvas = (element) =>
+    html2canvas(element, {
+      scale: getCaptureScale(element.offsetWidth),
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      onclone: (_doc, clonedRoot) => {
+        clonedRoot.style.lineHeight = 'normal';
+        clonedRoot.querySelectorAll('td, th').forEach((cell) => {
+          cell.style.verticalAlign = 'middle';
+        });
+        clonedRoot.querySelectorAll('.routine-cell-inner').forEach((inner) => {
+          inner.style.verticalAlign = 'middle';
+        });
+      },
+    });
 
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
+      const canvas = await withExportCapture(captureExportCanvas);
+      if (!canvas) return;
+
+      const imgData = canvas.toDataURL('image/png');
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      
-      const titleElement = document.querySelector('#routine-print-sheet h2');
-      const titleText = titleElement ? titleElement.innerText : `Class Routine - Section ${selectedGroup}`;
-      
-      doc.setFontSize(14);
-      doc.text(titleText, 15, 15);
-      
-      autoTable(doc, { 
-        html: '#routine-main-table', 
-        startY: 20,
-        useCss: true,
-        theme: 'grid',
-        styles: { fontSize: 10, cellPadding: 2 }
-      });
-      
-      let finalY = doc.lastAutoTable.finalY + 10;
-      
-      autoTable(doc, {
-        html: '#routine-odd-table',
-        startY: finalY,
-        margin: { left: 15, right: 230 },
-        useCss: true,
-        theme: 'grid',
-        styles: { fontSize: 9 }
-      });
-      
-      autoTable(doc, {
-        html: '#routine-inst-table',
-        startY: finalY,
-        margin: { left: 75, right: 75 },
-        useCss: true,
-        theme: 'grid',
-        styles: { fontSize: 9 }
-      });
-      
-      autoTable(doc, {
-        html: '#routine-even-table',
-        startY: finalY,
-        margin: { left: 230, right: 15 },
-        useCss: true,
-        theme: 'grid',
-        styles: { fontSize: 9 }
-      });
-      
+      const { x, y, w, h } = getPdfImageDimensions(doc, imgData);
+      doc.addImage(imgData, 'PNG', x, y, w, h, undefined, 'NONE');
       doc.save(`NUB_ECSE_Routine_Section_${selectedGroup}.pdf`);
     } catch (err) {
       console.error("PDF generation failed:", err);
@@ -85,16 +105,11 @@ export default function DashboardScreen() {
   };
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('routine-print-sheet');
-    if (!element) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(element, {
-        scale: 3, // Very high density rendering for clearer text visibility
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
+      const canvas = await withExportCapture(captureExportCanvas);
+      if (!canvas) return;
+
       const link = document.createElement('a');
       link.download = `NUB_ECSE_Routine_Section_${selectedGroup || 'Full'}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -303,9 +318,14 @@ export default function DashboardScreen() {
           <RoutineTable routine={routine} selectedGroup={selectedGroup} />
 
           {/* Hidden layout for direct DOM capturing */}
-          <div className="absolute top-0 pointer-events-none" style={{ left: '-10000px' }}>
-            <RoutineDownloadLayout 
-              routine={routine} 
+          <div
+            ref={printSheetRef}
+            className="absolute top-0 pointer-events-none"
+            style={{ left: '-10000px' }}
+          >
+            <RoutineDownloadLayout
+              forExport
+              routine={routine}
               selectedGroup={selectedGroup}
               title={title}
               season={season}
@@ -315,7 +335,7 @@ export default function DashboardScreen() {
           </div>
 
           {/* Sessional/Print Layout Preview Modal */}
-          <RoutinePreviewModal 
+          <RoutinePreviewModal
             isOpen={previewOpen}
             onClose={() => setPreviewOpen(false)}
             routine={routine}

@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import { X, ZoomIn, ZoomOut, FileText, Image as ImageIcon } from 'lucide-react';
 import RoutineDownloadLayout from './RoutineDownloadLayout.jsx';
 
-export default function RoutinePreviewModal({ 
-  isOpen, 
-  onClose, 
-  routine, 
+export default function RoutinePreviewModal({
+  isOpen,
+  onClose,
+  routine,
   selectedGroup,
   title,
   season,
   oddDates,
   evenDates,
   onDownloadPdf,
-  onDownloadImage 
+  onDownloadImage,
 }) {
   const [scale, setScale] = useState(0.85);
 
@@ -95,17 +95,17 @@ export default function RoutinePreviewModal({
 
         {/* Modal Scrollable Workspace */}
         <div className="flex-1 overflow-auto p-8 flex justify-center bg-slate-200/50">
-          <div 
+          <div
             className="transition-transform duration-100 ease-out origin-top shadow-xl rounded-lg"
-            style={{ 
-              transform: `scale(${scale})`, 
+            style={{
+              transform: `scale(${scale})`,
               height: 'fit-content',
-              marginBottom: '2rem'
+              marginBottom: '2rem',
             }}
           >
-            <RoutineDownloadLayout 
-              routine={routine} 
-              selectedGroup={selectedGroup} 
+            <RoutineDownloadLayout
+              routine={routine}
+              selectedGroup={selectedGroup}
               title={title}
               season={season}
               oddDates={oddDates}
