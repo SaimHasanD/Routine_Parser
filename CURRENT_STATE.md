@@ -68,7 +68,6 @@
 
 ## What to Do Next
 
-- Deploy the frontend to a hosting provider and the backend to a server, then update the API base URL to point to the production backend.
 - Consider adding an admin panel to update the sessional dates dynamically for future semesters, as they are currently hardcoded.
 - Implement a JWT-based authentication system for the admin dashboard rather than using a single hardcoded password.
 
