@@ -16,7 +16,7 @@ A class schedule viewer for ECSE students at Northern University Bangladesh. Sel
 
 ![Generated routine](assets/02-routine-view.png)
 
-**Download in official NUB print format**
+**Download in print format**
 
 ![PDF preview](assets/03-pdf-preview.png)
 

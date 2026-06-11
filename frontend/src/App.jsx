@@ -33,12 +33,21 @@ export default function App() {
           </div>
           <span className="font-bold text-slate-900 tracking-tight">NUB Routine Hub</span>
         </div>
-        <button
-          onClick={() => navigate(currentRoute === '/admin' ? '/' : '/admin')}
-          className="text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
-        >
-          {currentRoute === '/admin' ? 'Public Portal' : 'Admin Panel'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.open('https://rajdip27.github.io/NUB-Cover-Page/', '_blank')}
+            className="text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            NUB Cover Page
+          </button>
+
+          <button
+            onClick={() => navigate(currentRoute === '/admin' ? '/' : '/admin')}
+            className="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            {currentRoute === '/admin' ? 'Public Portal' : 'Admin Panel'}
+          </button>
+        </div>
       </nav>
 
       {/* Screen Router */}
