@@ -108,29 +108,6 @@ async def admin_status():
         "total_entries": meta["total_entries"],
     }
 
-@app.get("/api/v1/mother", response_model=GroupRoutineResponse)
-async def get_mother_routine():
-    """Return the ECSE master routine (the first ECSE group)."""
-    state = await get_state()
-    for group_id, entries in state["index"].items():
-        if group_id.upper().startswith("ECSE"):
-            # reuse existing deduplication and merge logic
-            # Deduplicate merged-cell duplicates by (day, time_slot, course_code, section_type, teacher name)
-            seen, unique = set(), []
-            for e in entries:
-                teacher_name = e["teacher"]["name"] if isinstance(e.get("teacher"), dict) else e.get("teacher")
-                key = (e.get("day"), e["time_slot"], e["course_code"], e["section_type"], teacher_name)
-                if key not in seen:
-                    seen.add(key)
-                    unique.append(dict(e))
-            merged = merge_consecutive_entries(unique)
-            merged.sort(key=lambda e: (
-                {"Sunday":0,"Monday":1,"Tuesday":2,"Wednesday":3,"Thursday":4,"Friday":5,"Saturday":6}.get(e.get("day","Sunday"),99),
-                normalize_to_24h(e.get("start_time",""))
-            ))
-            return GroupRoutineResponse(group=group_id, entries=[ScheduleEntry(**e) for e in merged])
-    raise HTTPException(404, "No ECSE master routine found")
-
 
 # ── Upload ────────────────────────────────────────────────────────────────────
 
