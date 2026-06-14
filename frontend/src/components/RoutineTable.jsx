@@ -1,72 +1,10 @@
 import React from 'react';
 import { Clock, User, MapPin, BookOpen } from 'lucide-react';
+import { COURSE_NAMES } from '../utils/courseNames.js';
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const COURSE_NAMES = {
-  "CSE 1102": "Structured Programming Language",
-  "CSE 1157": "Structured Programming Language Lab",
-  "CSE 1205": "Electrical Engineering and Circuit Analysis",
-  "CSE 1258": "Discrete Mathematics",
-  "CSE 1259": "Electrical Engineering and Circuit Analysis Lab",
-  "CSE 1290": "Software Development I",
-  "CSE 1307": "Object-Oriented Programming I (C++)",
-  "CSE 1360": "Object-Oriented Programming Lab",
-  "ENG 1204": "English II (Advanced)",
-  "MATH 1101": "Mathematics I (Differential Calculus and Integral Calculus)",
-  "MATH 1302": "Mathematics II",
-  "PHY 1302": "Physics II (Electromagnetism, Optics, and Modern Physics)",
-  
-  "CSE 2109": "Electronic Engineering",
-  "CSE 2111": "Data Structures",
-  "CSE 2161": "Electronic Engineering Lab Work",
-  "CSE 2162": "Data Structure Lab Work",
-  "CSE 2215": "Digital Logic Design",
-  "CSE 2263": "Algorithm Design and Analysis",
-  "CSE 2264": "Algorithms Lab Work",
-  "CSE 2265": "Digital Logic Design Lab Work",
-  "CSE 2291": "Software Development II (Database Programming)",
-  "CSE 2317": "Digital Electronics & Pulse Technique",
-  "CSE 2319": "Database Management System",
-  "CSE 2366": "Digital Electronics & Pulse Technique Lab Works",
-  "CSE 2367": "Database Management Systems Lab Work",
-  "MATH 2103": "Mathematics III (Matrices, Vectors & Coordinate Geometry)",
-  "MATH 2204": "Mathematics IV (Complex Variable & Laplace Transformation)",
-  "MATH 2305": "Mathematics V (Statistics and Probability)",
 
-  "CSE 3124": "Microprocessor and Assembly Language Programming",
-  "CSE 3168": "Numerical Methods",
-  "CSE 3169": "Theory of Computation",
-  "CSE 3170": "Computer Architecture",
-  "CSE 3171": "Microprocessor and Assembly Language Programming Lab Work",
-  "CSE 3186": "Numerical Methods Lab Work",
-  "CSE 3226": "Digital Image Processing",
-  "CSE 3227": "Data Communication",
-  "CSE 3228": "Compiler Design",
-  "CSE 3230": "Software Engineering",
-  "CSE 3272": "Compiler Design Lab Work",
-  "CSE 3292": "Software Development III (Web Programming)",
-  "CSE 3331": "Operating System",
-  "CSE 3333": "Object-Oriented Programming II (Java)",
-  "CSE 3373": "Operating System Lab Work",
-  "CSE 3374": "Object-Oriented Programming II Lab Work (Java)",
-  "CSE 3375": "Communication Engineering",
-
-  "CSE 4136": "Computer Networks",
-  "CSE 4176": "Computer Networks Lab Work",
-  "CSE 4138": "Computer Peripherals and Interfacing",
-  "CSE 4177": "Computer Peripherals and Interfacing Lab Work",
-  "CSE 4241": "VLSI Design",
-  "CSE 4279": "VLSI Design Lab Work",
-  "CSE 4278": "Computer Graphics and Multimedia System Design",
-  "CSE 4288": "Computer Graphics Lab Work",
-  "CSE 4349": "Management Information System",
-  "CSE 4351": "Image Processing & Computer Vision",
-  "CSE 4383": "Image Processing & Computer Vision Lab Work",
-  "CSE 4355": "Artificial Intelligence and Expert Systems",
-  "CSE 4385": "Artificial Intelligence and Expert Systems Lab Work",
-  "IPE 4101": "Industrial Management"
-};
 
 export default function RoutineTable({ routine, selectedGroup }) {
   return (

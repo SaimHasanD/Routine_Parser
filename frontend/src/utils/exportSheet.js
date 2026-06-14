@@ -3,6 +3,18 @@ export const A4_LANDSCAPE_WIDTH_PX = 1122;
 
 export const EXPORT_SHEET_PADDING = '10mm';
 
+/**
+ * Wait for fonts to finish loading and let the browser settle one paint
+ * cycle before html2canvas captures. Fixes text appearing shifted/misaligned
+ * in exported images vs. live preview.
+ */
+export async function waitForExportReady() {
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 /** Cap at 2 for speed; layout is already print width. */
 export function getCaptureScale(elementWidth) {
   if (!elementWidth || elementWidth <= 0) return 2;
