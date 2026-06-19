@@ -3,10 +3,10 @@ import { Search, ChevronDown, Calendar, BookOpen, FileText, Download, Image as I
 import RoutineTable from '../components/RoutineTable.jsx';
 import RoutinePreviewModal from '../components/RoutinePreviewModal.jsx';
 import RoutineDownloadLayout from '../components/RoutineDownloadLayout.jsx';
-import { healthCheck, fetchGroups, fetchRoutine } from '../services/api.js';
+import { healthCheck, fetchGroups, fetchRoutine, getSourceFileUrl } from '../services/api.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { getCaptureScale, getPdfImageDimensions } from '../utils/exportSheet.js';
+import { getCaptureScale, getPdfImageDimensions, waitForExportReady } from '../utils/exportSheet.js';
 
 
 
@@ -26,6 +26,8 @@ export default function DashboardScreen() {
   const [hasSearched, setHasSearched] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sourceFilename, setSourceFilename] = useState(null);
+  const [sourceAvailable, setSourceAvailable] = useState(false);
   const dropdownRef = useRef(null);
   const printSheetRef = useRef(null);
 
@@ -68,8 +70,9 @@ export default function DashboardScreen() {
     }
   };
 
-  const captureExportCanvas = (element) =>
-    html2canvas(element, {
+  const captureExportCanvas = async (element) => {
+    await waitForExportReady();
+    return html2canvas(element, {
       scale: getCaptureScale(element.offsetWidth),
       backgroundColor: '#ffffff',
       useCORS: true,
@@ -85,6 +88,7 @@ export default function DashboardScreen() {
         });
       },
     });
+  };
 
   const handleDownloadPdf = async () => {
     setDownloading(true);
@@ -133,6 +137,8 @@ export default function DashboardScreen() {
         setGroups(data.groups || []);
         if (data.title) setTitle(data.title);
         if (data.season) setSeason(data.season);
+        setSourceFilename(data.source_filename || null);
+        setSourceAvailable(Boolean(data.source_available));
       } catch (err) {
         console.error("Init error", err);
         setGroups([]);
@@ -201,6 +207,23 @@ export default function DashboardScreen() {
         )}
       </div>
 
+      {sourceFilename && sourceAvailable && (
+        <div className="bg-white px-5 py-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-700">Source:</span>{' '}
+            {sourceFilename}
+          </p>
+          <a
+            href={getSourceFileUrl()}
+            download={sourceFilename}
+            className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm px-4 py-2 rounded-xl border border-slate-200/60 transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Download Excel
+          </a>
+        </div>
+      )}
+
       {/* Group Selector */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-end">
         <div className="w-full relative" ref={dropdownRef}>
@@ -256,11 +279,10 @@ export default function DashboardScreen() {
         <button
           onClick={handleGenerateRoutine}
           disabled={!selectedGroup || loading}
-          className={`w-full md:w-auto px-8 py-3.5 font-semibold rounded-xl tracking-wide whitespace-nowrap transition-all shadow-sm ${
-            selectedGroup && !loading
+          className={`w-full md:w-auto px-8 py-3.5 font-semibold rounded-xl tracking-wide whitespace-nowrap transition-all shadow-sm ${selectedGroup && !loading
               ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow'
               : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-          }`}
+            }`}
         >
           {loading ? 'Loading...' : 'Generate Routine'}
         </button>
@@ -284,7 +306,7 @@ export default function DashboardScreen() {
                 Routine Loaded Successfully
               </span>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <button
                 onClick={handleDownloadPdf}
@@ -302,9 +324,9 @@ export default function DashboardScreen() {
                 <Download className="w-4 h-4" />
                 {downloading ? "Compiling..." : "Download Image"}
               </button>
-              
+
               <div className="h-6 w-px bg-slate-200 mx-1" />
-              
+
               <button
                 onClick={() => setPreviewOpen(true)}
                 title="Print Preview Layout"

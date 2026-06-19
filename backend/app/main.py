@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 try:
     from .models import UploadResponse, GroupRoutineResponse, ScheduleEntry, Teacher
@@ -38,6 +39,16 @@ DEFAULT_ROUTINE_PATHS = [
     str(Path(__file__).resolve().parent.parent / "test_data" / "Version_1_ ECSE Class Routine Summer 2025.xlsx"),
     str(Path(__file__).resolve().parent.parent.parent / "Version_1_ ECSE Class Routine Summer 2025.xlsx"),
 ]
+
+
+def _resolve_source_file() -> Path | None:
+    files = sorted(DATA_DIR.glob("*.xlsx"))
+    if files:
+        return files[0]
+    for path in DEFAULT_ROUTINE_PATHS:
+        if path and os.path.isfile(path):
+            return Path(path)
+    return None
 
 
 @asynccontextmanager
@@ -165,11 +176,34 @@ async def upload(file: UploadFile = File(...), password: str = Form(""), replace
 @app.get("/api/v1/groups")
 async def list_groups():
     state = await get_state()
+    meta = await get_routine_meta()
+    source_path = _resolve_source_file()
     return {
         "groups": state["groups"],
         "title": state.get("title"),
-        "season": state.get("season")
+        "season": state.get("season"),
+        "source_filename": meta["filename"],
+        "source_available": source_path is not None and is_loaded(),
     }
+
+
+@app.get("/api/v1/source-file")
+async def download_source_file():
+    if not is_loaded():
+        raise HTTPException(404, "No routine loaded.")
+
+    source_path = _resolve_source_file()
+    if source_path is None:
+        raise HTTPException(404, "Source file not found on disk.")
+
+    meta = await get_routine_meta()
+    filename = meta["filename"] or source_path.name
+
+    return FileResponse(
+        path=str(source_path),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+    )
 
 
 # ── Routine by group ──────────────────────────────────────────────────────────

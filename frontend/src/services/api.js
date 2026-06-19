@@ -19,6 +19,10 @@ export async function fetchGroups() {
   return res.json();
 }
 
+export function getSourceFileUrl() {
+  return `${BASE_URL}/source-file`;
+}
+
 export async function fetchRoutine(groupId) {
   const res = await fetch(`${BASE_URL}/routine/${groupId}`);
   if (!res.ok) throw new Error(`Failed to fetch routine for ${groupId}`);
