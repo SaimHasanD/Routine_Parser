@@ -29,6 +29,20 @@ logger = logging.getLogger("uvicorn.error")
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123_nu")
 
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET", "routine-files")
+
+supabase_client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        from supabase import create_client, Client
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except ImportError:
+        logger.warning("Supabase configured but 'supabase' library is not installed.")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Supabase client: {e}")
+
 # Persistent storage for the single active routine file
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -58,6 +72,25 @@ async def lifespan(app: FastAPI):
 
     # 1) Check for a previously uploaded routine in data/
     uploaded_files = sorted(DATA_DIR.glob("*.xlsx"))
+    
+    # Fetch from Supabase if no local file (e.g. after Render restart)
+    if not uploaded_files and supabase_client:
+        try:
+            files = supabase_client.storage.from_(SUPABASE_BUCKET).list()
+            excel_files = [f for f in files if isinstance(f, dict) and f.get('name', '').endswith('.xlsx')]
+            if excel_files:
+                excel_files.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                latest_filename = excel_files[0]['name']
+                file_bytes = supabase_client.storage.from_(SUPABASE_BUCKET).download(latest_filename)
+                
+                dest_path = DATA_DIR / latest_filename
+                with open(dest_path, "wb") as f:
+                    f.write(file_bytes)
+                uploaded_files = [dest_path]
+                logger.info(f"Downloaded latest routine '{latest_filename}' from Supabase bucket.")
+        except Exception as e:
+            logger.warning(f"Failed to fetch from Supabase: {e}")
+
     if uploaded_files:
         path = str(uploaded_files[0])
         try:
@@ -156,6 +189,25 @@ async def upload(file: UploadFile = File(...), password: str = Form(""), replace
     # Persist the uploaded file to data/
     dest = DATA_DIR / file.filename
     shutil.move(tmp_path, str(dest))
+
+    # Sync to Supabase
+    if supabase_client:
+        try:
+            files = supabase_client.storage.from_(SUPABASE_BUCKET).list()
+            old_files = [f['name'] for f in files if isinstance(f, dict) and f.get('name', '').endswith('.xlsx')]
+            if old_files:
+                supabase_client.storage.from_(SUPABASE_BUCKET).remove(old_files)
+                
+            with open(dest, "rb") as f:
+                file_bytes = f.read()
+            supabase_client.storage.from_(SUPABASE_BUCKET).upload(
+                file.filename,
+                file_bytes,
+                file_options={"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+            )
+            logger.info(f"Uploaded '{file.filename}' to Supabase bucket '{SUPABASE_BUCKET}'")
+        except Exception as e:
+            logger.warning(f"Failed to sync with Supabase: {e}")
 
     await set_state(data, filename=file.filename)
 
