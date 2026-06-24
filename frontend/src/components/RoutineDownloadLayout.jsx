@@ -243,13 +243,27 @@ export default function RoutineDownloadLayout({
     color: '#ffffff',
   };
 
+  let displayTitle = title || `NUB · ECSE · Section ${selectedGroup} — Class Routine`;
+  if (title) {
+    displayTitle = title.replace(/Northern University Bangladesh Permanent Campus Central\s*/gi, "");
+    if (!displayTitle.toLowerCase().includes('section')) {
+      if (displayTitle.includes("ECSE,")) {
+        displayTitle = displayTitle.replace("ECSE,", `ECSE, Section ${selectedGroup},`);
+      } else if (displayTitle.includes("ECSE")) {
+        displayTitle = displayTitle.replace("ECSE", `ECSE, Section ${selectedGroup}`);
+      } else {
+        displayTitle = `${displayTitle} (Section ${selectedGroup})`;
+      }
+    }
+  }
+
   return (
     <div id={rootId} style={pageStyle}>
 
       {/* HEADER */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>
-          {title || `NUB · ECSE · Section ${selectedGroup} — Class Routine`}
+          {displayTitle}
         </h1>
         {season && <span style={termStyle}>{season}</span>}
       </div>
