@@ -1,4 +1,6 @@
 import os
+import base64
+import json
 import shutil
 import tempfile
 import logging
@@ -46,6 +48,26 @@ if SUPABASE_URL and SUPABASE_KEY:
 # Persistent storage for the single active routine file
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
+
+# Exam schedule JSON path (same data directory)
+EXAM_SCHEDULE_PATH = DATA_DIR / "exam_schedule.json"
+
+# Google Cloud Vision client — credentials loaded from env var (JSON string)
+vision_client = None
+_gcp_creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if _gcp_creds_json:
+    try:
+        from google.cloud import vision as _vision_mod
+        from google.oauth2 import service_account as _sa_mod
+        _gcp_info = json.loads(_gcp_creds_json)
+        _gcp_credentials = _sa_mod.Credentials.from_service_account_info(
+            _gcp_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        vision_client = _vision_mod.ImageAnnotatorClient(credentials=_gcp_credentials)
+        logger.info("Google Cloud Vision client initialised.")
+    except Exception as _e:
+        logger.warning(f"Failed to initialise Google Cloud Vision client: {_e}")
 
 # Default file paths for initial auto-load (fallback if no uploaded routine exists)
 DEFAULT_ROUTINE_PATHS = [
@@ -416,3 +438,277 @@ async def get_routine(group_id: str):
         even_week_dates=state.get("even_week_dates", []),
         entries=[ScheduleEntry(**e) for e in merged]
     )
+
+
+# ── Exam Schedule ─────────────────────────────────────────────────────────────
+
+
+def _pdf_first_page_to_png(src_path: str) -> str:
+    """Render the first page of a PDF to a temp PNG file. Returns the PNG path."""
+    try:
+        from pdf2image import convert_from_path
+    except ImportError:
+        raise HTTPException(500, "pdf2image is not installed. Cannot process PDF files.")
+
+    images = convert_from_path(src_path, first_page=1, last_page=1, dpi=200)
+    if not images:
+        raise HTTPException(422, "Could not render any pages from the PDF.")
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    images[0].save(tmp.name, format="PNG")
+    tmp.close()
+    return tmp.name
+
+
+def parse_exam_text(raw_text: str) -> dict:
+    """
+    Parse raw OCR text from an exam schedule image into a structured dict.
+
+    Expected output:
+    {
+      "semester": "Spring 2026",
+      "note": "...",
+      "slots": {"slot1": "...", "slot2": "...", "slot3": "..."},
+      "schedule": [
+        {
+          "date": "DD/MM/YYYY",
+          "day": "<day name>",
+          "slot1": ["CSE 4136: Computer Networks (7)"],
+          "slot2": [...],
+          "slot3": []
+        }
+      ]
+    }
+    """
+    import re
+
+    lines = [ln.strip() for ln in raw_text.splitlines()]
+    lines = [ln for ln in lines if ln]  # drop blank lines
+
+    semester = ""
+    note = None
+    slots: dict[str, str] = {}
+    schedule: list[dict] = []
+
+    # ── Patterns ────────────────────────────────────────────────────────────
+    # Date: DD/MM/YYYY or DD-MM-YYYY optionally followed by a day name
+    date_pat = re.compile(
+        r"""(?P<date>\d{1,2}[/\-]\d{1,2}[/\-]\d{4})\s*"""
+        r"""(?P<day>[A-Za-z]+)?""",
+        re.IGNORECASE,
+    )
+    # Course entry: letters/digits + space(s) + digits, colon, rest, optional (N)
+    course_pat = re.compile(
+        r"[A-Z]{2,}\s*\d{3,}.*?:\s*.+",
+        re.IGNORECASE,
+    )
+    # Slot time line: e.g. "Slot 1: 9:00 AM – 11:00 AM" or "Slot-1 9:00AM-11:00AM"
+    slot_pat = re.compile(
+        r"slot\s*[-:]?\s*(\d)\s*[:\-]?\s*(.+)",
+        re.IGNORECASE,
+    )
+    # Note / footnote markers
+    note_pat = re.compile(r"^(note|\*|\†|footnote)[:\s]", re.IGNORECASE)
+
+    # ── First pass: collect semester, slots, notes ────────────────────────
+    for ln in lines:
+        # Slot time descriptions
+        m = slot_pat.match(ln)
+        if m:
+            key = f"slot{m.group(1)}"
+            slots[key] = m.group(2).strip()
+            continue
+
+        # Note / footnote
+        if note_pat.match(ln):
+            note = ln
+            continue
+
+        # Semester title heuristic: a line with a season word + 4-digit year
+        if re.search(r"(spring|summer|fall|winter|autumn)\s+\d{4}", ln, re.IGNORECASE):
+            semester = ln
+            continue
+
+    # Ensure all three slot keys exist (fill blanks if the image only listed some)
+    for i in range(1, 4):
+        slots.setdefault(f"slot{i}", "")
+
+    # ── Second pass: collect schedule rows ───────────────────────────────
+    current_entry: dict | None = None
+    # We'll accumulate courses per slot by tracking which slot column we're in.
+    # Many exam tables list courses sequentially under each date row, grouped by slot.
+    # Strategy: when we see a date line → start new entry; following course lines
+    # belong to slots in order unless a slot marker resets the counter.
+    slot_cursor = 1  # which slot we're currently filling (1-3)
+
+    for ln in lines:
+        # New date row ⟹ flush previous entry, start fresh
+        dm = date_pat.search(ln)
+        if dm:
+            if current_entry:
+                schedule.append(current_entry)
+            raw_date = dm.group("date").replace("-", "/")
+            # Normalise to DD/MM/YYYY (ensure two-digit day and month)
+            parts = raw_date.split("/")
+            if len(parts) == 3:
+                raw_date = f"{int(parts[0]):02d}/{int(parts[1]):02d}/{parts[2]}"
+            day_name = (dm.group("day") or "").strip().capitalize()
+            # If the day name isn't on this line, try the next non-empty line
+            current_entry = {
+                "date": raw_date,
+                "day": day_name,
+                "slot1": [],
+                "slot2": [],
+                "slot3": [],
+            }
+            slot_cursor = 1
+            continue
+
+        if current_entry is None:
+            continue
+
+        # Explicit slot marker mid-table resets the cursor
+        sm = slot_pat.match(ln)
+        if sm:
+            slot_cursor = int(sm.group(1))
+            continue
+
+        # Course line
+        if course_pat.match(ln):
+            slot_key = f"slot{slot_cursor}"
+            if slot_key in current_entry:
+                current_entry[slot_key].append(ln)
+            # Advance cursor: if multiple courses appear sequentially without a
+            # slot marker, each new course goes to the next slot (common layout).
+            if slot_cursor < 3:
+                slot_cursor += 1
+            continue
+
+        # A bare day name following a date line fills in the missing day
+        if current_entry and not current_entry["day"]:
+            days = {"sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"}
+            if ln.lower() in days:
+                current_entry["day"] = ln.capitalize()
+
+    # Flush last entry
+    if current_entry:
+        schedule.append(current_entry)
+
+    return {
+        "semester": semester,
+        "note": note,
+        "slots": slots,
+        "schedule": schedule,
+    }
+
+
+@app.post("/api/v1/exam/upload")
+async def upload_exam_schedule(
+    file: UploadFile = File(...),
+    password: str = Form(""),
+):
+    """Admin-only. Accept an image or PDF of the exam schedule, run Google
+    Cloud Vision OCR, parse the result, and persist it to exam_schedule.json."""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(401, "Invalid admin password.")
+
+    if vision_client is None:
+        raise HTTPException(
+            500,
+            "GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set "
+            "or the Vision client failed to initialise.",
+        )
+
+    filename_lower = (file.filename or "").lower()
+    is_pdf = filename_lower.endswith(".pdf")
+    is_image = any(
+        filename_lower.endswith(ext)
+        for ext in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff", ".bmp")
+    )
+
+    if not (is_pdf or is_image):
+        raise HTTPException(
+            400,
+            "Only image files (.png, .jpg, .jpeg, .webp, .tiff, .bmp) or PDF files are supported.",
+        )
+
+    # ── Save upload to temp file ─────────────────────────────────────────
+    suffix = ".pdf" if is_pdf else Path(file.filename or "upload").suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+    png_path: str | None = None
+    try:
+        # For PDF: convert first page to PNG
+        if is_pdf:
+            try:
+                png_path = _pdf_first_page_to_png(tmp_path)
+                image_path = png_path
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(422, f"PDF conversion failed: {exc}")
+        else:
+            image_path = tmp_path
+
+        # ── Read image bytes and call Vision OCR ────────────────────────
+        with open(image_path, "rb") as f:
+            content = f.read()
+
+        try:
+            from google.cloud import vision as _vision_mod
+
+            gv_image = _vision_mod.Image(content=content)
+            response = vision_client.document_text_detection(image=gv_image)
+            if response.error.message:
+                raise HTTPException(
+                    502,
+                    f"Google Vision API error: {response.error.message}",
+                )
+            raw_text = response.full_text_annotation.text
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(502, f"Google Cloud Vision call failed: {exc}")
+
+    finally:
+        # Clean up temp files
+        for p in (tmp_path, png_path):
+            if p:
+                try:
+                    os.unlink(p)
+                except FileNotFoundError:
+                    pass
+
+    if not raw_text.strip():
+        raise HTTPException(422, "Vision OCR returned no text. Check the uploaded image quality.")
+
+    # ── Parse OCR text into structured JSON ─────────────────────────────
+    try:
+        schedule_data = parse_exam_text(raw_text)
+    except Exception as exc:
+        raise HTTPException(422, f"Failed to parse OCR text: {exc}")
+
+    # ── Persist to disk ──────────────────────────────────────────────────
+    EXAM_SCHEDULE_PATH.write_text(
+        json.dumps(schedule_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    logger.info(f"Exam schedule saved to {EXAM_SCHEDULE_PATH} "
+                f"({len(schedule_data.get('schedule', []))} exam days)")
+
+    return {"success": True, "entries": len(schedule_data.get("schedule", []))}
+
+
+@app.get("/api/v1/exam")
+async def get_exam_schedule():
+    """Public. Returns the cached exam schedule JSON or 404 if not uploaded yet."""
+    if not EXAM_SCHEDULE_PATH.exists():
+        raise HTTPException(404, "No exam schedule uploaded yet")
+
+    try:
+        data = json.loads(EXAM_SCHEDULE_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(500, f"Failed to read exam schedule: {exc}")
+
+    return data
