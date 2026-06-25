@@ -89,14 +89,11 @@ def _resolve_source_file() -> Path | None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Auto-load routine on startup. Priority: uploaded file in data/ > default test_data paths."""
+    """Auto-load routine on startup. Priority: Supabase (Source of Truth) > local uploaded file > default test paths."""
     loaded = False
 
-    # 1) Check for a previously uploaded routine in data/
-    uploaded_files = sorted(DATA_DIR.glob("*.xlsx"))
-    
-    # Fetch from Supabase if no local file (e.g. after Render restart)
-    if not uploaded_files and supabase_client:
+    # 1) Force Sync from Supabase if configured (Source of Truth)
+    if supabase_client:
         try:
             files = supabase_client.storage.from_(SUPABASE_BUCKET).list()
             excel_files = [f for f in files if isinstance(f, dict) and f.get('name', '').endswith('.xlsx')]
@@ -105,14 +102,19 @@ async def lifespan(app: FastAPI):
                 latest_filename = excel_files[0]['name']
                 file_bytes = supabase_client.storage.from_(SUPABASE_BUCKET).download(latest_filename)
                 
+                # Clear all existing local files before saving the latest one
+                for old_file in DATA_DIR.glob("*.xlsx"):
+                    old_file.unlink()
+                    
                 dest_path = DATA_DIR / latest_filename
                 with open(dest_path, "wb") as f:
                     f.write(file_bytes)
-                uploaded_files = [dest_path]
-                logger.info(f"Downloaded latest routine '{latest_filename}' from Supabase bucket.")
+                logger.info(f"Force-synced latest routine '{latest_filename}' from Supabase bucket.")
         except Exception as e:
-            logger.warning(f"Failed to fetch from Supabase: {e}")
+            logger.warning(f"Failed to force-sync from Supabase: {e}")
 
+    # 2) Load the latest local file (either just downloaded from Supabase, or persisted locally)
+    uploaded_files = sorted(DATA_DIR.glob("*.xlsx"))
     if uploaded_files:
         path = str(uploaded_files[0])
         try:
@@ -124,7 +126,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"Failed to auto-load uploaded routine {path}: {e}")
 
-    # 2) Fallback to default paths if no uploaded routine
+    # 3) Fallback to default test paths if completely empty
     if not loaded:
         for path in DEFAULT_ROUTINE_PATHS:
             if path and os.path.isfile(path):
