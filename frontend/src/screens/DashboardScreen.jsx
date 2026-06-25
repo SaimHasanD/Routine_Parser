@@ -224,6 +224,12 @@ export default function DashboardScreen() {
         </div>
       )}
 
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3">
+        <p className="text-sm text-blue-800">
+          <span className="font-medium">Exam Routine:</span> This feature will be available soon.
+        </p>
+      </div>
+
       {/* Group Selector */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-end">
         <div className="w-full relative" ref={dropdownRef}>
@@ -280,8 +286,8 @@ export default function DashboardScreen() {
           onClick={handleGenerateRoutine}
           disabled={!selectedGroup || loading}
           className={`w-full md:w-auto px-8 py-3.5 font-semibold rounded-xl tracking-wide whitespace-nowrap transition-all shadow-sm ${selectedGroup && !loading
-              ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow'
-              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            ? 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow'
+            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             }`}
         >
           {loading ? 'Loading...' : 'Generate Routine'}
