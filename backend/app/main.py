@@ -1,11 +1,17 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Force load .env from the backend directory
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
 import base64
 import json
 import shutil
 import tempfile
 import logging
 import glob
-from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
@@ -54,6 +60,7 @@ EXAM_SCHEDULE_PATH = DATA_DIR / "exam_schedule.json"
 
 # Google Cloud Vision client — credentials loaded from env var (JSON string)
 vision_client = None
+vision_init_error = None
 _gcp_creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
 if _gcp_creds_json:
     try:
@@ -67,7 +74,12 @@ if _gcp_creds_json:
         vision_client = _vision_mod.ImageAnnotatorClient(credentials=_gcp_credentials)
         logger.info("Google Cloud Vision client initialised.")
     except Exception as _e:
-        logger.warning(f"Failed to initialise Google Cloud Vision client: {_e}")
+        vision_init_error = str(_e)
+        logger.error(f"Failed to initialise Google Cloud Vision client: {_e}")
+        import traceback
+        traceback.print_exc()
+else:
+    vision_init_error = "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set in the environment or .env file."
 
 # Default file paths for initial auto-load (fallback if no uploaded routine exists)
 DEFAULT_ROUTINE_PATHS = [
@@ -157,7 +169,7 @@ app.add_middleware(
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
-@app.get("/api/v1/health")
+@app.api_route("/api/v1/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "loaded": is_loaded()}
 
@@ -617,8 +629,7 @@ async def upload_exam_schedule(
     if vision_client is None:
         raise HTTPException(
             500,
-            "GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set "
-            "or the Vision client failed to initialise.",
+            f"Vision client failed to initialise: {vision_init_error}"
         )
 
     filename_lower = (file.filename or "").lower()
