@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import UploadScreen from './screens/UploadScreen.jsx';
 import DashboardScreen from './screens/DashboardScreen.jsx';
 
+function getInitialRoute() {
+  const p = window.location.pathname;
+  if (p === '/admin') return '/admin';
+  return '/';
+}
+
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState(
-    window.location.pathname === '/admin' ? '/admin' : '/'
-  );
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentRoute(window.location.pathname === '/admin' ? '/admin' : '/');
-    };
+    const handleLocationChange = () => setCurrentRoute(getInitialRoute());
     window.addEventListener('popstate', handleLocationChange);
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);

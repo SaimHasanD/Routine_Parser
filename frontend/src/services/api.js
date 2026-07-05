@@ -23,6 +23,11 @@ export function getSourceFileUrl() {
   return `${BASE_URL}/source-file`;
 }
 
+export function getExamFileUrl() {
+  // Paste the exact URL you copied from Supabase right here. It will look something like this:
+  return "https://[YOUR_PROJECT_ID].supabase.co/storage/v1/object/public/routine-files/exam_schedule_image.jpeg";
+}
+
 export async function fetchRoutine(groupId) {
   const res = await fetch(`${BASE_URL}/routine/${groupId}`);
   if (!res.ok) throw new Error(`Failed to fetch routine for ${groupId}`);
@@ -41,3 +46,23 @@ export async function uploadExcel(file, password, replace = false) {
   }
   return res.json();
 }
+
+export async function getExamSchedule() {
+  const res = await fetch(`${BASE_URL}/exam`);
+  if (!res.ok) throw new Error('No exam schedule found');
+  return res.json();
+}
+
+export async function uploadExamSchedule(file, password) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('password', password || '');
+  const res = await fetch(`${BASE_URL}/exam/upload`, { method: 'POST', body: formData });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail.detail || `Upload failed (${res.status})`);
+  }
+  return res.json();
+}
+
+

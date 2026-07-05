@@ -161,7 +161,6 @@ export default function RoutineDownloadLayout({
   const mainTdBase = {
     padding: '7px 8px',
     textAlign: 'left',
-    verticalAlign: 'middle',
     lineHeight: 1.4,
     borderBottom: `1px solid ${BORDER}`,
   };
