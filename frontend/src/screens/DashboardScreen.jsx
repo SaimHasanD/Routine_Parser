@@ -215,8 +215,8 @@ export default function DashboardScreen() {
         <button
           onClick={() => setViewMode('class')}
           className={`flex-1 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${viewMode === 'class'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
             }`}
         >
           Class Routine
@@ -224,8 +224,8 @@ export default function DashboardScreen() {
         <button
           onClick={() => setViewMode('exam')}
           className={`flex-1 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${viewMode === 'exam'
-              ? 'bg-violet-600 text-white shadow-sm'
-              : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            ? 'bg-violet-600 text-white shadow-sm'
+            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
             }`}
         >
           Exam Routine
@@ -238,10 +238,10 @@ export default function DashboardScreen() {
         <>
           {/* Group Selector */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex gap-4 items-start">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
 
               {/* Left half: section dropdown */}
-              <div className="flex-1 relative" ref={dropdownRef}>
+              <div className="flex-1 w-full relative" ref={dropdownRef}>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                   Filter by Semester
                 </label>
@@ -293,13 +293,18 @@ export default function DashboardScreen() {
 
               {/* Right half: source file */}
               {sourceFilename && sourceAvailable && (
-                <div className="flex-1">
+                <div className="flex-1 w-full">
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                     Source File
                   </label>
                   <a
                     href={getSourceFileUrl()}
                     download={sourceFilename}
+                    onClick={(e) => {
+                      if (!window.confirm(`Download "${sourceFilename}"?`)) {
+                        e.preventDefault();
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl flex justify-between items-center hover:border-slate-300 hover:bg-slate-100 transition-colors"
                   >
                     <span className="text-slate-700 font-medium text-sm truncate">{sourceFilename}</span>

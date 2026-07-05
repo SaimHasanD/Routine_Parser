@@ -176,10 +176,10 @@ export default function ExamSchedule() {
 
       {/* ── Semester Filter ──────────────────────────────────────────────── */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <div className="flex gap-4 items-start">
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
 
           {/* Left half: semester dropdown */}
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
               Filter by Semester
             </label>
