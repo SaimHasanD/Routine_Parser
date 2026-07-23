@@ -66,16 +66,4 @@ export const COURSE_NAMES = {
   "CSE 4351": "Image Processing & Computer Vision",
   "CSE 4383": "Image Processing & Computer Vision Lab Work",
 
-  // Legacy/Old Curriculum Courses
-  "CSE 1102": "Structured Programming Language",
-  "CSE 1157": "Structured Programming Language Lab",
-  "CSE 1205": "Electrical Engineering and Circuit Analysis",
-  "CSE 1258": "Discrete Mathematics",
-  "CSE 1259": "Electrical Engineering and Circuit Analysis Lab",
-  "CSE 1290": "Software Development I",
-  "CSE 1307": "Object-Oriented Programming I (C++)",
-  "CSE 1360": "Object-Oriented Programming Lab",
-  "ENG 1204": "English II (Advanced)",
-  "MATH 1302": "Mathematics II",
-  "PHY 1302": "Physics II (Electromagnetism, Optics, and Modern Physics)",
 };

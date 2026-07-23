@@ -6,7 +6,7 @@ import RoutineDownloadLayout from '../components/RoutineDownloadLayout.jsx';
 import { healthCheck, fetchGroups, fetchRoutine, getSourceFileUrl } from '../services/api.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { getCaptureScale, getPdfImageDimensions, waitForExportReady } from '../utils/exportSheet.js';
+import { getCaptureScale, getPdfImageDimensions, waitForExportReady, downloadCanvasAsImage } from '../utils/exportSheet.js';
 import ExamSchedule from './ExamSchedule.jsx';
 
 
@@ -41,15 +41,6 @@ export default function DashboardScreen() {
     const element = getExportRoot();
     if (!host || !element) return null;
 
-    const saved = {
-      position: host.style.position,
-      left: host.style.left,
-      top: host.style.top,
-      zIndex: host.style.zIndex,
-      opacity: host.style.opacity,
-      visibility: host.style.visibility,
-    };
-
     host.style.position = 'fixed';
     host.style.left = '0';
     host.style.top = '0';
@@ -63,12 +54,13 @@ export default function DashboardScreen() {
       await document.fonts.ready;
       return await captureFn(element);
     } finally {
-      host.style.position = saved.position;
-      host.style.left = saved.left;
-      host.style.top = saved.top;
-      host.style.zIndex = saved.zIndex;
-      host.style.opacity = saved.opacity;
-      host.style.visibility = saved.visibility;
+      // Hardcode restoration to avoid race condition where 'saved' state gets corrupted
+      host.style.position = '';
+      host.style.left = '-10000px';
+      host.style.top = '';
+      host.style.zIndex = '';
+      host.style.opacity = '';
+      host.style.visibility = '';
     }
   };
 
@@ -116,12 +108,7 @@ export default function DashboardScreen() {
       const canvas = await withExportCapture(captureExportCanvas);
       if (!canvas) return;
 
-      const link = document.createElement('a');
-      link.download = `NUB_ECSE_Routine_Section_${selectedGroup || 'Full'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCanvasAsImage(canvas, `NUB_ECSE_Routine_Section_${selectedGroup || 'Full'}.png`);
     } catch (err) {
       console.error("Image generation failed:", err);
     } finally {

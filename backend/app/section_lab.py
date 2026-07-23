@@ -1,6 +1,6 @@
 from openpyxl.worksheet.worksheet import Worksheet
 from .merge_resolver import get_cell_value
-from .cell_parser import parse_cell
+from .section_utils import extract_row_entries
 
 
 ODD_MARKER    = "odd"
@@ -36,22 +36,21 @@ def parse_lab_section(ws: Worksheet, time_slots: dict, merge_map: dict, start_ro
                 week_note = ""
                 section_type = "lab"
 
-            for col_idx, time_slot in time_slots.items():
-                if col_idx <= 2:
-                    continue
-                cell_val = get_cell_value(ws, sub_row, col_idx, merge_map)
-                if not cell_val:
-                    continue
-
-                parsed = parse_cell(str(cell_val))
-                for p in parsed:
-                    entries.append({
-                        **p,
-                        "room":         room,
-                        "time_slot":    time_slot,
-                        "section_type": section_type,
-                        "week_note":    week_note,
-                    })
+            base_props = {
+                "room": room,
+                "section_type": section_type,
+                "week_note": week_note,
+            }
+            
+            row_entries = extract_row_entries(
+                ws, 
+                merge_map, 
+                sub_row, 
+                time_slots, 
+                base_props, 
+                col_start=3
+            )
+            entries.extend(row_entries)
 
         row_idx += 2
 

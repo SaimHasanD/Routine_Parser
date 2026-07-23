@@ -23,10 +23,7 @@ export function getSourceFileUrl() {
   return `${BASE_URL}/source-file`;
 }
 
-export function getExamFileUrl() {
-  // Paste the exact URL you copied from Supabase right here. It will look something like this:
-  return "https://[YOUR_PROJECT_ID].supabase.co/storage/v1/object/public/routine-files/exam_schedule_image.jpeg";
-}
+
 
 export async function fetchRoutine(groupId) {
   const res = await fetch(`${BASE_URL}/routine/${groupId}`);

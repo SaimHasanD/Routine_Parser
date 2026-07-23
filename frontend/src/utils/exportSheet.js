@@ -35,3 +35,12 @@ export function getPdfImageDimensions(doc, imgData, margin = 8) {
   }
   return { x: margin, y: margin, w, h };
 }
+
+export function downloadCanvasAsImage(canvas, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

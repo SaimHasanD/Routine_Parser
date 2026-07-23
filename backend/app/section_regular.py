@@ -1,14 +1,12 @@
 from openpyxl.worksheet.worksheet import Worksheet
-from .merge_resolver import build_merge_map, get_cell_value
-from .cell_parser import parse_cell
-
-
+from .merge_resolver import get_cell_value
+from .section_utils import extract_row_entries
 
 def parse_regular_section(ws: Worksheet, time_slots: dict, merge_map: dict, start_row: int, end_row: int) -> list[dict]:
     """
     Iterates rows from start_row to end_row. Each row = one room.
     For every time slot column, parses cell content.
-    Returns list of raw schedule entries (teacher_acro not yet resolved).
+    Returns list of raw schedule entries.
     """
     entries = []
 
@@ -19,19 +17,13 @@ def parse_regular_section(ws: Worksheet, time_slots: dict, merge_map: dict, star
         else:
             room = "TBA"
 
-        for col_idx, time_slot in time_slots.items():
-            cell_val = get_cell_value(ws, row_idx, col_idx, merge_map)
-            if not cell_val:
-                continue
-
-            parsed = parse_cell(str(cell_val))
-            for p in parsed:
-                entries.append({
-                    **p,
-                    "room":         room,
-                    "time_slot":    time_slot,
-                    "section_type": "regular",
-                    "week_note":    "",
-                })
+        base_props = {
+            "room": room,
+            "section_type": "regular",
+            "week_note": "",
+        }
+        
+        row_entries = extract_row_entries(ws, merge_map, row_idx, time_slots, base_props)
+        entries.extend(row_entries)
 
     return entries

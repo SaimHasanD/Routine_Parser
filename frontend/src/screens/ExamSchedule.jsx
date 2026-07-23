@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, FileText, Download, AlertCircle, ClipboardList, Image as ImageIcon, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { getExamSchedule, getExamFileUrl } from '../services/api.js';
+import { getExamSchedule } from '../services/api.js';
+import { getPdfImageDimensions, downloadCanvasAsImage } from '../utils/exportSheet.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -84,17 +85,7 @@ export default function ExamSchedule() {
       if (!canvas) return;
       const imgData = canvas.toDataURL('image/png');
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const margin = 10;
-      const maxW = pageW - margin * 2;
-      const maxH = pageH - margin * 2;
-      const ratio = canvas.width / canvas.height;
-      let w = maxW;
-      let h = maxW / ratio;
-      if (h > maxH) { h = maxH; w = maxH * ratio; }
-      const x = (pageW - w) / 2;
-      const y = (pageH - h) / 2;
+      const { x, y, w, h } = getPdfImageDimensions(doc, imgData, 10);
       doc.addImage(imgData, 'PNG', x, y, w, h, undefined, 'NONE');
       doc.save(`${filenameBase}.pdf`);
     } catch (err) {
@@ -109,12 +100,7 @@ export default function ExamSchedule() {
     try {
       const canvas = await captureCanvas();
       if (!canvas) return;
-      const link = document.createElement('a');
-      link.download = `${filenameBase}.png`;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCanvasAsImage(canvas, `${filenameBase}.png`);
     } catch (err) {
       console.error('Image generation failed:', err);
     } finally {
@@ -198,21 +184,29 @@ export default function ExamSchedule() {
           </div>
 
           {/* Right half: source file */}
-          {/* {data.image_url && (
+          {data.image_url && (
             <div className="flex-1">
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Source File
               </label>
-              <a
-                href={getExamFileUrl()}
-                download="exam_schedule_image.jpeg"
+              <button
+                onClick={async () => {
+                  const res = await fetch(data.image_url);
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'exam_schedule_image.jpeg';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
                 className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl flex justify-between items-center hover:border-slate-300 hover:bg-slate-100 transition-colors"
               >
                 <span className="text-slate-700 font-medium text-sm truncate">exam_schedule_image.jpeg</span>
                 <Download className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
-              </a>
+              </button>
             </div>
-          )} */}
+          )}
 
         </div>
       </div>
