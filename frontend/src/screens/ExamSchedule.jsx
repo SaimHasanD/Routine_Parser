@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { getExamSchedule } from '../services/api.js';
 import { getPdfImageDimensions, downloadCanvasAsImage } from '../utils/exportSheet.js';
+import ExamPreviewModal from '../components/ExamPreviewModal.jsx';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export default function ExamSchedule() {
   const [selectedSem, setSelectedSem] = useState('');   // '' = All
   const [downloading, setDownloading] = useState(false);
   const [showImage, setShowImage] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const tableRef = useRef(null);
 
   // ── fetch on mount ─────────────────────────────────────────────────────────
@@ -236,8 +238,26 @@ export default function ExamSchedule() {
             <Download className="w-4 h-4" />
             {downloading ? 'Compiling…' : 'Download Image'}
           </button>
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <button
+            onClick={() => setPreviewOpen(true)}
+            title="Print Preview Layout"
+            className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl border border-slate-200/60 transition-all active:scale-95"
+          >
+            <ImageIcon className="w-4.5 h-4.5" />
+          </button>
         </div>
       </div>
+
+      {/* ── Exam Preview Modal ────────────────────────────────────────── */}
+      <ExamPreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        visibleRows={visibleRows}
+        selectedSem={selectedSem}
+        onDownloadPdf={handleDownloadPdf}
+        onDownloadImage={handleDownloadImage}
+      />
 
       {/* ── Routine-like Grid View ──────────────────────────────────────── */}
       <div
