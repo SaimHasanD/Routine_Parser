@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import UploadScreen from './screens/UploadScreen.jsx';
 import DashboardScreen from './screens/DashboardScreen.jsx';
+import logoIcon from './assets/icon.png';
 
 function getInitialRoute() {
   const p = window.location.pathname;
@@ -30,9 +31,7 @@ export default function App() {
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            N
-          </div>
+          <img src={logoIcon} alt="NUBmap Logo" className="w-8 h-8 rounded-lg object-contain" />
           <span className="font-bold text-slate-900 tracking-tight">NUB Routine Hub by NUBmap</span>
         </div>
         <div className="flex gap-3">
