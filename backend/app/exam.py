@@ -342,3 +342,24 @@ async def get_exam_schedule():
         raise HTTPException(500, f"Failed to parse exam schedule from Supabase: {exc}")
 
     return data
+
+
+@router.get("/api/v1/exam/image")
+async def get_exam_image(filename: str):
+    """Public. Proxies the image download if the Supabase bucket is private."""
+    from fastapi.responses import Response
+    if not supabase_client:
+        raise HTTPException(500, "Supabase is not configured.")
+
+    try:
+        # Download directly using the authenticated backend client
+        image_bytes = supabase_client.storage.from_(SUPABASE_BUCKET).download(filename)
+        
+        ext = filename.split(".")[-1].lower() if "." in filename else "jpeg"
+        mime_map = {
+            "jpg": "image/jpeg", "jpeg": "image/jpeg",
+            "png": "image/png", "webp": "image/webp", "gif": "image/gif"
+        }
+        return Response(content=image_bytes, media_type=mime_map.get(ext, "image/jpeg"))
+    except Exception as exc:
+        raise HTTPException(404, f"Image not found or failed to download: {exc}")

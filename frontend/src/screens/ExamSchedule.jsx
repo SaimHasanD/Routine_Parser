@@ -193,18 +193,31 @@ export default function ExamSchedule() {
               </label>
               <button
                 onClick={async () => {
-                  const res = await fetch(data.image_url);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'exam_schedule_image.jpeg';
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  // Extract actual filename and extension from the Supabase URL
+                  const urlParts = data.image_url.split('/');
+                  const filename = urlParts[urlParts.length - 1].split('?')[0] || 'exam_schedule_image.jpg';
+                  
+                  try {
+                    const res = await fetch(data.image_url);
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename; // Use the dynamic filename (e.g., .png or .webp)
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch (error) {
+                    // Fallback if fetch fails (e.g. CORS block on storage bucket)
+                    console.error("Fetch failed, falling back to direct open:", error);
+                    window.open(data.image_url, '_blank');
+                  }
                 }}
                 className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl flex justify-between items-center hover:border-slate-300 hover:bg-slate-100 transition-colors"
               >
-                <span className="text-slate-700 font-medium text-sm truncate">exam_schedule_image.jpeg</span>
+                <span className="text-slate-700 font-medium text-sm truncate">
+                  {data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image'}
+                </span>
                 <Download className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
               </button>
             </div>
