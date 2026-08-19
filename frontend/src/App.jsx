@@ -56,10 +56,12 @@ export default function App() {
         {currentRoute === '/admin' ? <UploadScreen /> : <DashboardScreen />}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#1e1b52] py-12 mt-auto w-full">
-        <div className="container mx-auto px-4 max-w-6xl flex flex-col items-center justify-center text-center">
-          <h2 className="text-white text-2xl md:text-3xl font-bold mb-6">A NUBmap utility.</h2>
+      {/* ── Footer Redesign ─────────────────────────────────────────────────── */}
+      <footer className="bg-[#1e1b52] w-full py-12 px-6 flex flex-col items-center justify-center mt-auto shadow-[0_-4px_20px_rgba(0,0,0,0.2)] z-10 relative">
+        <div className="max-w-4xl mx-auto flex flex-col items-center gap-6">
+          <h2 className="text-white text-3xl sm:text-4xl font-extrabold tracking-tight text-center drop-shadow-md">
+            They were here the whole time.
+          </h2>
           <a
             href="https://nubmap.com"
             target="_blank"

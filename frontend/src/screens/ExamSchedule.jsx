@@ -207,7 +207,7 @@ export default function ExamSchedule() {
               onChange={(e) => setSelectedSem(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-slate-800 font-medium cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
             >
-              <option value="">All Semesters</option>
+              <option value="" disabled>Select a semester...</option>
               {semesters.map((s) => (
                 <option key={s} value={s}>
                   Semester {s}
@@ -224,7 +224,6 @@ export default function ExamSchedule() {
               </label>
               <button
                 onClick={async () => {
-                  // Extract actual filename and extension from the Supabase URL
                   const urlParts = data.image_url.split('/');
                   const filename = urlParts[urlParts.length - 1].split('?')[0] || 'exam_schedule_image.jpg';
                   
@@ -235,11 +234,10 @@ export default function ExamSchedule() {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = filename; // Use the dynamic filename (e.g., .png or .webp)
+                    a.download = filename;
                     a.click();
                     URL.revokeObjectURL(url);
                   } catch (error) {
-                    // Fallback if fetch fails (e.g. CORS block on storage bucket)
                     console.error("Fetch failed, falling back to direct open:", error);
                     window.open(data.image_url, '_blank');
                   }
@@ -257,83 +255,91 @@ export default function ExamSchedule() {
         </div>
       </div>
 
-      {/* ── Download Toolbar ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">
-            Exam Schedule Loaded
-          </span>
+      {!selectedSem ? (
+        <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
+          <p className="text-slate-400 text-sm font-medium">
+            Select a semester above to load your exam schedule.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDownloadPdf}
-            disabled={downloading}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
-          >
-            <FileText className="w-4 h-4" />
-            {downloading ? 'Compiling…' : 'Download PDF'}
-          </button>
-          <button
-            onClick={handleDownloadImage}
-            disabled={downloading}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
-          >
-            <Download className="w-4 h-4" />
-            {downloading ? 'Compiling…' : 'Download Image'}
-          </button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <button
-            onClick={() => setPreviewOpen(true)}
-            title="Print Preview Layout"
-            className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl border border-slate-200/60 transition-all active:scale-95"
-          >
-            <ImageIcon className="w-4.5 h-4.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Hidden Layout for direct DOM capturing ────────────────────────── */}
-      <div
-        ref={printSheetRef}
-        className="absolute top-0 pointer-events-none"
-        style={{ left: '-10000px' }}
-      >
-        <ExamDownloadLayout
-          forExport
-          visibleRows={visibleRows}
-          selectedSem={selectedSem}
-        />
-      </div>
-
-      {/* ── Exam Preview Modal ────────────────────────────────────────── */}
-      <ExamPreviewModal
-        isOpen={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        visibleRows={visibleRows}
-        selectedSem={selectedSem}
-      />
-
-      {/* ── Routine-like Grid View ──────────────────────────────────────── */}
-      <div
-        ref={tableRef}
-        className="space-y-6"
-      >
-        {visibleRows.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
-            <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-slate-900 font-semibold mb-1">No Exam Slots</h3>
-            <p className="text-slate-500 text-sm">No exam slots match the selected semester.</p>
+      ) : (
+        <>
+          {/* ── Download Toolbar ─────────────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                Exam Schedule Loaded
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadPdf}
+                disabled={downloading}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+              >
+                <FileText className="w-4 h-4" />
+                {downloading ? 'Compiling…' : 'Download PDF'}
+              </button>
+              <button
+                onClick={handleDownloadImage}
+                disabled={downloading}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4" />
+                {downloading ? 'Compiling…' : 'Download Image'}
+              </button>
+              <div className="h-6 w-px bg-slate-200 mx-1" />
+              <button
+                onClick={() => setPreviewOpen(true)}
+                title="Print Preview Layout"
+                className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl border border-slate-200/60 transition-all active:scale-95"
+              >
+                <ImageIcon className="w-4.5 h-4.5" />
+              </button>
+            </div>
           </div>
-        ) : (
-          Object.entries(
-            visibleRows.reduce((acc, row) => {
-              const key = `${row.date} - ${row.day}`;
-              if (!acc[key]) acc[key] = [];
-              acc[key].push(row);
-              return acc;
-            }, {})
-          ).map(([dateDay, slots], idx) => (
+
+          {/* ── Hidden Layout for direct DOM capturing ────────────────────────── */}
+          <div
+            ref={printSheetRef}
+            className="absolute top-0 pointer-events-none"
+            style={{ left: '-10000px' }}
+          >
+            <ExamDownloadLayout
+              forExport
+              visibleRows={visibleRows}
+              selectedSem={selectedSem}
+            />
+          </div>
+
+          {/* ── Exam Preview Modal ────────────────────────────────────────── */}
+          <ExamPreviewModal
+            isOpen={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+            visibleRows={visibleRows}
+            selectedSem={selectedSem}
+          />
+
+          {/* ── Routine-like Grid View ──────────────────────────────────────── */}
+          <div
+            ref={tableRef}
+            className="space-y-6"
+          >
+            {visibleRows.length === 0 ? (
+              <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
+                <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-slate-900 font-semibold mb-1">No Exam Slots</h3>
+                <p className="text-slate-500 text-sm">No exam slots match the selected semester.</p>
+              </div>
+            ) : (
+              Object.entries(
+                visibleRows.reduce((acc, row) => {
+                  const key = `${row.date} - ${row.day}`;
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(row);
+                  return acc;
+                }, {})
+              ).map(([dateDay, slots], idx) => (
             <div
               key={idx}
               className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col md:flex-row"
@@ -401,6 +407,8 @@ export default function ExamSchedule() {
         Showing {visibleRows.length} of {scheduleArray.length} exam slots
         {selectedSem ? ` · Semester ${selectedSem}` : ''}
       </p>
+      </>
+      )}
     </div>
   );
 }
