@@ -57,11 +57,8 @@ export default function App() {
       </main>
 
       {/* ── Footer Redesign ─────────────────────────────────────────────────── */}
-      <footer className="bg-[#1e1b52] w-full py-12 px-6 flex flex-col items-center justify-center mt-auto shadow-[0_-4px_20px_rgba(0,0,0,0.2)] z-10 relative">
+      <footer className="bg-[#1e1b52] w-full py-8 px-6 flex flex-col items-center justify-center mt-auto shadow-[0_-4px_20px_rgba(0,0,0,0.2)] z-10 relative">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-6">
-          <h2 className="text-white text-3xl sm:text-4xl font-extrabold tracking-tight text-center drop-shadow-md">
-            They were here the whole time.
-          </h2>
           <a
             href="https://nubmap.com"
             target="_blank"

@@ -303,7 +303,7 @@ export default function ExamSchedule() {
           {/* ── Hidden Layout for direct DOM capturing ────────────────────────── */}
           <div
             ref={printSheetRef}
-            className="absolute top-0 pointer-events-none"
+            className="fixed top-0 pointer-events-none"
             style={{ left: '-10000px' }}
           >
             <ExamDownloadLayout
