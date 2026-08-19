@@ -26,7 +26,7 @@ function allSemesters(scheduleArray) {
 /** Filter a course list to only entries matching the selected semester */
 function filterCourses(courses, sem) {
   const arr = Array.isArray(courses) ? courses : [];
-  if (!sem) return arr;
+  if (!sem || sem === 'All') return arr;
   return arr.filter((c) => c && typeof c === 'object' && String(c.semester) === String(sem));
 }
 
@@ -65,7 +65,7 @@ export default function ExamSchedule() {
   const visibleRows = scheduleArray.map((row) => ({
     ...row,
     courses: filterCourses(row.courses, selectedSem)
-  })).filter((row) => !selectedSem || row.courses.length > 0);
+  })).filter((row) => !selectedSem || selectedSem === 'All' || row.courses.length > 0);
 
   const today = new Date().toISOString().slice(0, 10);
   const semSlug = 'exam-schedule';
@@ -208,6 +208,7 @@ export default function ExamSchedule() {
               className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-slate-800 font-medium cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
             >
               <option value="" disabled>Select a semester...</option>
+              <option value="All">All Semesters</option>
               {semesters.map((s) => (
                 <option key={s} value={s}>
                   Semester {s}
