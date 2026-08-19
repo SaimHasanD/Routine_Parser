@@ -69,7 +69,46 @@ export default function ExamSchedule() {
   const filenameBase = `${semSlug}-${today}`;
 
   // ── capture helpers ────────────────────────────────────────────────────────
+  const captureCanvas = async () => {
+    if (!tableRef.current) return null;
+    await document.fonts.ready;
+    return html2canvas(tableRef.current, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+  };
 
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const canvas = await captureCanvas();
+      if (!canvas) return;
+      const imgData = canvas.toDataURL('image/png');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const { x, y, w, h } = getPdfImageDimensions(doc, imgData, 10);
+      doc.addImage(imgData, 'PNG', x, y, w, h, undefined, 'NONE');
+      doc.save(`${filenameBase}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    setDownloading(true);
+    try {
+      const canvas = await captureCanvas();
+      if (!canvas) return;
+      downloadCanvasAsImage(canvas, `${filenameBase}.png`);
+    } catch (err) {
+      console.error('Image generation failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // ── render states ──────────────────────────────────────────────────────────
   if (loading) {
@@ -197,11 +236,28 @@ export default function ExamSchedule() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setPreviewOpen(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
           >
             <FileText className="w-4 h-4" />
-            Print & Download Format
+            {downloading ? 'Compiling…' : 'Download PDF'}
+          </button>
+          <button
+            onClick={handleDownloadImage}
+            disabled={downloading}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? 'Compiling…' : 'Download Image'}
+          </button>
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <button
+            onClick={() => setPreviewOpen(true)}
+            title="Print Preview Layout"
+            className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl border border-slate-200/60 transition-all active:scale-95"
+          >
+            <ImageIcon className="w-4.5 h-4.5" />
           </button>
         </div>
       </div>
