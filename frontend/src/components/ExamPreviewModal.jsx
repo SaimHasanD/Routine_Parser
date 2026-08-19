@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { COURSE_NAMES } from '../utils/courseNames.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { getPdfImageDimensions, downloadCanvasAsImage } from '../utils/exportSheet.js';
 
 // Helper to precisely format the slot string
 const formatSlotString = (slotStr) => {
@@ -23,11 +26,11 @@ export default function ExamPreviewModal({
   isOpen,
   onClose,
   visibleRows,
-  selectedSem,
-  onDownloadPdf,
-  onDownloadImage,
+  selectedSem
 }) {
   const [scale, setScale] = useState(0.85);
+  const [downloading, setDownloading] = useState(false);
+  const printRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && typeof window !== 'undefined') {
@@ -48,6 +51,61 @@ export default function ExamPreviewModal({
 
   // If selectedSem has a value and is not "All", treat it as a specific semester
   const isSpecificSemester = selectedSem && selectedSem !== 'All';
+
+  const today = new Date().toISOString().slice(0, 10);
+  const filenameBase = `exam-schedule-${today}`;
+
+  const captureCanvas = async () => {
+    if (!printRef.current) return null;
+    
+    // We need to temporarily un-scale the parent so html2canvas captures at 100% resolution.
+    const wrapper = printRef.current.parentElement;
+    const oldTransform = wrapper.style.transform;
+    wrapper.style.transform = 'scale(1)';
+    
+    await document.fonts.ready;
+    await new Promise(r => setTimeout(r, 50));
+    
+    const canvas = await html2canvas(printRef.current, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+    
+    wrapper.style.transform = oldTransform;
+    return canvas;
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const canvas = await captureCanvas();
+      if (!canvas) return;
+      const imgData = canvas.toDataURL('image/png');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const { x, y, w, h } = getPdfImageDimensions(doc, imgData, 0); 
+      doc.addImage(imgData, 'PNG', x, y, w, h, undefined, 'NONE');
+      doc.save(`${filenameBase}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    setDownloading(true);
+    try {
+      const canvas = await captureCanvas();
+      if (!canvas) return;
+      downloadCanvasAsImage(canvas, `${filenameBase}.png`);
+    } catch (err) {
+      console.error('Image generation failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm transition-all duration-300">
@@ -73,8 +131,22 @@ export default function ExamPreviewModal({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto justify-end">
-            <button onClick={onDownloadPdf} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors shadow-sm">Download PDF</button>
-            <button onClick={onDownloadImage} className="bg-green-600 hover:bg-green-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors shadow-sm">Download Image</button>
+            <button 
+              onClick={handleDownloadPdf} 
+              disabled={downloading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+            >
+              {downloading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {downloading ? 'Processing...' : 'Download PDF'}
+            </button>
+            <button 
+              onClick={handleDownloadImage} 
+              disabled={downloading}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+            >
+              {downloading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {downloading ? 'Processing...' : 'Download Image'}
+            </button>
             <div className="hidden sm:block h-8 w-px bg-slate-200 mx-1" />
             <button onClick={onClose} className="p-2 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-lg transition-colors" title="Close"><X className="w-5 h-5" /></button>
           </div>
@@ -85,7 +157,7 @@ export default function ExamPreviewModal({
           <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${scale})` }}>
             
             {/* The physical A4 page */}
-            <div className="w-[210mm] min-h-[297mm] p-[15mm] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] mx-auto relative flex flex-col text-black">
+            <div ref={printRef} className="w-[210mm] min-h-[297mm] p-[15mm] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] mx-auto relative flex flex-col text-black">
               
               {/* Document Top Header */}
               <div className="text-center mb-8">
