@@ -35,8 +35,8 @@ export default function ExamDownloadLayout({
           Department of Computer Science & Engineering
         </h2>
         
-        <div className="mt-5 inline-block text-center">
-          <h3 className="bg-yellow-100 border border-yellow-400 text-yellow-800 font-bold rounded-md px-4 py-1 text-[15px]">
+        <div className="mt-4 text-center flex flex-col gap-1 items-center">
+          <h3 className="text-[#2b5c82] font-bold text-[17px]">
             Midterm Examination Schedule, Summer-2026 (Revised)
           </h3>
           {/* Conditional Semester Rendering */}
