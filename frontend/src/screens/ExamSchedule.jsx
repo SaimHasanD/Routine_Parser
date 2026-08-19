@@ -212,8 +212,6 @@ export default function ExamSchedule() {
         onClose={() => setPreviewOpen(false)}
         visibleRows={visibleRows}
         selectedSem={selectedSem}
-        onDownloadPdf={handleDownloadPdf}
-        onDownloadImage={handleDownloadImage}
       />
 
       {/* ── Routine-like Grid View ──────────────────────────────────────── */}
