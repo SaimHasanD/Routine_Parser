@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, FileText, Download, AlertCircle, ClipboardList, Image as ImageIcon, X } from 'lucide-react';
+import { Calendar, AlertCircle, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { getExamSchedule } from '../services/api.js';
-import { getPdfImageDimensions, downloadCanvasAsImage } from '../utils/exportSheet.js';
+
+import { getPdfImageDimensions, downloadCanvasAsImage, waitForExportReady } from '../utils/exportSheet.js';
 import ExamPreviewModal from '../components/ExamPreviewModal.jsx';
+import ExamDownloadLayout from '../components/ExamDownloadLayout.jsx';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ export default function ExamSchedule() {
   const [showImage, setShowImage] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const tableRef = useRef(null);
+  const printSheetRef = useRef(null);
 
   // ── fetch on mount ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -68,11 +71,39 @@ export default function ExamSchedule() {
   const semSlug = 'exam-schedule';
   const filenameBase = `${semSlug}-${today}`;
 
-  // ── capture helpers ────────────────────────────────────────────────────────
-  const captureCanvas = async () => {
-    if (!tableRef.current) return null;
-    await document.fonts.ready;
-    return html2canvas(tableRef.current, {
+  const getExportRoot = () =>
+    printSheetRef.current?.querySelector('#exam-print-sheet') ?? null;
+
+  const withExportCapture = async (captureFn) => {
+    const host = printSheetRef.current;
+    const element = getExportRoot();
+    if (!host || !element) return null;
+
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = '0';
+    host.style.zIndex = '99999';
+    host.style.opacity = '1';
+    host.style.visibility = 'visible';
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    try {
+      await document.fonts.ready;
+      return await captureFn(element);
+    } finally {
+      host.style.position = '';
+      host.style.left = '-10000px';
+      host.style.top = '';
+      host.style.zIndex = '';
+      host.style.opacity = '';
+      host.style.visibility = '';
+    }
+  };
+
+  const captureExportCanvas = async (element) => {
+    await waitForExportReady();
+    return html2canvas(element, {
       scale: 2,
       backgroundColor: '#ffffff',
       useCORS: true,
@@ -83,11 +114,11 @@ export default function ExamSchedule() {
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
-      const canvas = await captureCanvas();
+      const canvas = await withExportCapture(captureExportCanvas);
       if (!canvas) return;
       const imgData = canvas.toDataURL('image/png');
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const { x, y, w, h } = getPdfImageDimensions(doc, imgData, 10);
+      const { x, y, w, h } = getPdfImageDimensions(doc, imgData, 0);
       doc.addImage(imgData, 'PNG', x, y, w, h, undefined, 'NONE');
       doc.save(`${filenameBase}.pdf`);
     } catch (err) {
@@ -100,7 +131,7 @@ export default function ExamSchedule() {
   const handleDownloadImage = async () => {
     setDownloading(true);
     try {
-      const canvas = await captureCanvas();
+      const canvas = await withExportCapture(captureExportCanvas);
       if (!canvas) return;
       downloadCanvasAsImage(canvas, `${filenameBase}.png`);
     } catch (err) {
@@ -260,6 +291,19 @@ export default function ExamSchedule() {
             <ImageIcon className="w-4.5 h-4.5" />
           </button>
         </div>
+      </div>
+
+      {/* ── Hidden Layout for direct DOM capturing ────────────────────────── */}
+      <div
+        ref={printSheetRef}
+        className="absolute top-0 pointer-events-none"
+        style={{ left: '-10000px' }}
+      >
+        <ExamDownloadLayout
+          forExport
+          visibleRows={visibleRows}
+          selectedSem={selectedSem}
+        />
       </div>
 
       {/* ── Exam Preview Modal ────────────────────────────────────────── */}
