@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, AlertCircle, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { getExamSchedule } from '../services/api.js';
+import { getExamSchedule, getExamImageUrl } from '../services/api.js';
 
 import { getPdfImageDimensions, downloadCanvasAsImage, waitForExportReady } from '../utils/exportSheet.js';
 import ExamPreviewModal from '../components/ExamPreviewModal.jsx';
@@ -223,33 +223,22 @@ export default function ExamSchedule() {
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Source File
               </label>
-              <button
-                onClick={async () => {
-                  const urlParts = data.image_url.split('/');
-                  const filename = urlParts[urlParts.length - 1].split('?')[0] || 'exam_schedule_image.jpg';
-                  
-                  try {
-                    const res = await fetch(data.image_url);
-                    if (!res.ok) throw new Error('Network response was not ok');
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } catch (error) {
-                    console.error("Fetch failed, falling back to direct open:", error);
-                    window.open(data.image_url, '_blank');
+              <a
+                href={getExamImageUrl(decodeURIComponent(data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image.jpg'))}
+                download={decodeURIComponent(data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image.jpg')}
+                onClick={(e) => {
+                  const filename = decodeURIComponent(data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image.jpg');
+                  if (!window.confirm(`Download "${filename}"?`)) {
+                    e.preventDefault();
                   }
                 }}
                 className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl flex justify-between items-center hover:border-slate-300 hover:bg-slate-100 transition-colors"
               >
                 <span className="text-slate-700 font-medium text-sm truncate">
-                  {data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image'}
+                  {decodeURIComponent(data.image_url.split('/').pop().split('?')[0] || 'exam_schedule_image')}
                 </span>
                 <Download className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
-              </button>
+              </a>
             </div>
           )}
 

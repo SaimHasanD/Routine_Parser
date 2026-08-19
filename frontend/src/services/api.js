@@ -23,7 +23,9 @@ export function getSourceFileUrl() {
   return `${BASE_URL}/source-file`;
 }
 
-
+export function getExamImageUrl(filename) {
+  return `${BASE_URL}/exam/image?filename=${encodeURIComponent(filename)}`;
+}
 
 export async function fetchRoutine(groupId) {
   const res = await fetch(`${BASE_URL}/routine/${groupId}`);

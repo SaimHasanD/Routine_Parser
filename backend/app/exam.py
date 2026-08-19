@@ -360,6 +360,10 @@ async def get_exam_image(filename: str):
             "jpg": "image/jpeg", "jpeg": "image/jpeg",
             "png": "image/png", "webp": "image/webp", "gif": "image/gif"
         }
-        return Response(content=image_bytes, media_type=mime_map.get(ext, "image/jpeg"))
+        return Response(
+            content=image_bytes, 
+            media_type=mime_map.get(ext, "image/jpeg"),
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
     except Exception as exc:
         raise HTTPException(404, f"Image not found or failed to download: {exc}")
