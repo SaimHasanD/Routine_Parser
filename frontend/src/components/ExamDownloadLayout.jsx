@@ -37,7 +37,7 @@ export default function ExamDownloadLayout({
         
         <div className="mt-4 text-center flex flex-col gap-1 items-center">
           <h3 className="text-[#2b5c82] font-bold text-[17px]">
-            Midterm Examination Schedule, Summer-2026 (Revised)
+            Final Examination Schedule, Summer-2026
           </h3>
           {/* Conditional Semester Rendering */}
           {isSpecificSemester && (
